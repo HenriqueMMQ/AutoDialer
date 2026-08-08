@@ -472,6 +472,34 @@ async function pollServer()
 setInterval(pollServer, 5000);
 pollServer();
 
+// ── LIVE RESULTS POLLING ──────────────────────
+async function pollContacts()
+{
+  if (contacts.length === 0) return; // nothing loaded yet
+  try
+  {
+    const res  = await fetch(`${API}/api/contacts`, { signal: AbortSignal.timeout(2000) });
+    const data = await res.json();
+    if (!data.contacts || data.contacts.length === 0) return;
+    // Merge server statuses into local list (preserves local-only contacts)
+    let updated = false;
+    data.contacts.forEach(srv =>
+    {
+      const local = contacts.find(c => c.id === srv.id);
+      if (local && (local.status !== srv.status || local.notes !== srv.notes || local.calledAt !== srv.calledAt))
+      {
+        local.status   = srv.status;
+        local.notes    = srv.notes;
+        local.calledAt = srv.calledAt;
+        updated = true;
+      }
+    });
+    if (updated) refresh();
+  }
+  catch { /* server unreachable, ignore */ }
+}
+setInterval(pollContacts, 5000);
+
 // ── FILE HANDLING ─────────────────────────────
 async function handleFile(input)
 {

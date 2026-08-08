@@ -1,39 +1,58 @@
 const express = require('express');
+const state   = require('../state');
 
 const router = express.Router();
 
-// Pending dial command the Android app will pick up on its next poll
-let pendingDial = null;
-
-// POST /api/dial — backoffice tells the server to dial a contact
+// POST /api/dial — backoffice queues a dial command for the device
 router.post('/', (req, res) =>
 {
     const { contactId, name, phone } = req.body;
     if (!phone)
         return res.status(400).json({ error: 'phone is required' });
 
-    pendingDial = { contactId, name, phone, queuedAt: new Date().toISOString() };
+    state.pendingDial = { contactId, name, phone, queuedAt: new Date().toISOString() };
     console.log(`[dial] queued: ${name} — ${phone}`);
-    res.json({ queued: pendingDial });
+    res.json({ queued: state.pendingDial });
 });
 
-// GET /api/dial/next — Android app polls this; returns and clears the pending command
+// GET /api/dial/next — Android polls this; returns pending dial command and/or contacts sync
 router.get('/next', (req, res) =>
 {
-    if (!pendingDial)
-        return res.json({ pending: null });
+    const response = { pending: null, pendingContacts: null };
 
-    const command = pendingDial;
-    pendingDial   = null;
-    res.json({ pending: command });
+    if (state.pendingDial)
+    {
+        response.pending  = state.pendingDial;
+        state.pendingDial = null;
+    }
+
+    if (state.pendingContactsSync)
+    {
+        response.pendingContacts      = state.pendingContactsSync;
+        state.pendingContactsSync     = null;
+    }
+
+    res.json(response);
 });
 
-// POST /api/dial/result — Android app reports the outcome after the call ends
+// POST /api/dial/result — Android reports call outcome; updates the session contact list
 router.post('/result', (req, res) =>
 {
-    const { contactId, status, notes, calledAt } = req.body;
+    const { contactId, phone, status, notes, calledAt } = req.body;
     console.log(`[dial] result for contact ${contactId}: ${status}`);
-    // TODO: persist result and push update to connected backoffice clients (SSE / WebSocket)
+
+    // Update session contacts so the backoffice sees live results
+    let contact = state.sessionContacts.find(c => c.id === contactId);
+    if (!contact && phone)
+        contact = state.sessionContacts.find(c => c.phone.replace(/\s/g, '') === phone.replace(/\s/g, ''));
+
+    if (contact)
+    {
+        if (status)   contact.status   = status;
+        if (notes !== undefined) contact.notes = notes;
+        if (calledAt) contact.calledAt = calledAt;
+    }
+
     res.json({ ok: true });
 });
 

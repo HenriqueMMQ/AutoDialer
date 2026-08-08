@@ -87,4 +87,5 @@
     <!-- Remote dial -->
     <string name="toast_remote_dial">Backoffice: a ligar para %1$s</string>
     <string name="toast_remote_not_found">Contacto não encontrado na lista local: %1$s (%2$s)</string>
+    <string name="toast_contacts_synced">Lista sincronizada: %1$d contactos recebidos</string>
 </resources>

@@ -366,6 +366,7 @@ class MainActivity : AppCompatActivity()
                     saveState()
                     exportResultsSilently()
                     refreshUI()
+                    reportCallResult(contact)
                     if (checkAutoCall.isChecked && currentIndex < contacts.size)
                     {
                         scheduleAutoCall()
@@ -632,7 +633,20 @@ class MainActivity : AppCompatActivity()
                 val body = conn.inputStream.bufferedReader().readText()
                 conn.disconnect()
 
-                val json    = gson.fromJson(body, com.google.gson.JsonObject::class.java)
+                val json = gson.fromJson(body, com.google.gson.JsonObject::class.java)
+
+                val pendingContacts = json.get("pendingContacts")
+                if (pendingContacts != null && !pendingContacts.isJsonNull)
+                {
+                    val arr = pendingContacts.asJsonObject.get("contacts")?.asJsonArray
+                    if (arr != null)
+                    {
+                        val type = object : com.google.gson.reflect.TypeToken<MutableList<Contact>>() {}.type
+                        val incoming: MutableList<Contact> = gson.fromJson(arr, type)
+                        pollHandler.post { applyRemoteContacts(incoming) }
+                    }
+                }
+
                 val pending = json.get("pending")
                 if (pending != null && !pending.isJsonNull)
                 {
@@ -657,22 +671,73 @@ class MainActivity : AppCompatActivity()
         return id
     }
 
+    private fun applyRemoteContacts(incoming: MutableList<Contact>)
+    {
+        contacts.clear()
+        contacts.addAll(incoming)
+        currentIndex = 0
+        saveState()
+        refreshUI()
+        Toast.makeText(this, getString(R.string.toast_contacts_synced, contacts.size), Toast.LENGTH_SHORT).show()
+    }
+
     private fun handleRemoteDial(phone: String, name: String)
     {
         val cleanPhone = phone.replace("\\s".toRegex(), "")
         val idx = contacts.indexOfFirst { it.phone.replace("\\s".toRegex(), "") == cleanPhone }
-        if (idx < 0)
+        if (idx >= 0)
         {
-            Toast.makeText(this, getString(R.string.toast_remote_not_found, name, phone), Toast.LENGTH_LONG).show()
-            return
+            currentIndex = idx
         }
-        currentIndex = idx
+        else
+        {
+            // Not in local list — add a temporary contact so dialCurrent() works
+            val temp = Contact(
+                id = contacts.size + 1,
+                name = name,
+                phone = phone,
+                status = "pending"
+            )
+            contacts.add(temp)
+            currentIndex = contacts.size - 1
+            saveState()
+            refreshUI()
+        }
         Toast.makeText(this, getString(R.string.toast_remote_dial, name), Toast.LENGTH_SHORT).show()
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED)
             callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
         else
             dialCurrent()
+    }
+
+    private fun reportCallResult(contact: Contact)
+    {
+        val serverUrl = prefs.getString("serverUrl", "")?.trimEnd('/') ?: return
+        if (serverUrl.isEmpty()) return
+        val payload = gson.toJson(mapOf(
+            "contactId" to contact.id,
+            "phone"     to contact.phone,
+            "status"    to contact.status,
+            "notes"     to contact.notes,
+            "calledAt"  to contact.calledAt
+        ))
+        Thread {
+            try
+            {
+                val url  = java.net.URL("$serverUrl/api/dial/result")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+                conn.connectTimeout = 3000
+                conn.readTimeout    = 3000
+                conn.outputStream.use { it.write(payload.toByteArray()) }
+                conn.inputStream.bufferedReader().readText()
+                conn.disconnect()
+            }
+            catch (_: Exception) { }
+        }.start()
     }
 
     private fun pushContactsToServer()

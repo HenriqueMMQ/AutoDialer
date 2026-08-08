@@ -1,10 +1,12 @@
 const express = require('express');
-const router  = express.Router();
+const state   = require('../state');
+
+const router = express.Router();
 
 // In-memory store: deviceId → { contacts, syncedAt }
 const deviceContacts = {};
 
-// POST /api/device/contacts — Android app pushes its loaded contact list
+// POST /api/device/contacts — Android pushes its loaded contact list
 router.post('/contacts', (req, res) =>
 {
     const { deviceId, contacts } = req.body;
