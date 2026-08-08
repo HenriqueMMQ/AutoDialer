@@ -107,8 +107,13 @@
 
     <!-- Replace contacts confirmation -->
     <string name="dialog_title_replace_contacts">Replace list?</string>
-    <string name="dialog_message_replace_contacts">A list is already loaded. Loading a new file will permanently delete the current list and any unsaved results. Continue?</string>
+    <string name="dialog_message_replace_contacts">A list is already loaded. Loading a new file will permanently delete the current list and any unsaved results.\n\nExport the Excel first to avoid losing data. Continue?</string>
     <string name="dialog_replace_confirm">Replace</string>
+
+    <!-- Sync from backoffice confirmation -->
+    <string name="dialog_title_sync_contacts">Sync list?</string>
+    <string name="dialog_message_sync_contacts">The backoffice is pushing a new contact list. This will permanently replace the current list and any unsaved results.\n\nExport the Excel first to avoid losing data. Continue?</string>
+    <string name="dialog_sync_confirm">Sync</string>
 
     <!-- Do Not Call -->
     <string name="status_dnc">Do Not Call</string>

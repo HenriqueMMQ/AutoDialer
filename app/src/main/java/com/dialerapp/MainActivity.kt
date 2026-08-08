@@ -757,6 +757,21 @@ class MainActivity : AppCompatActivity()
 
     private fun applyRemoteContacts(incoming: MutableList<Contact>)
     {
+        if (contacts.isNotEmpty())
+        {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_title_sync_contacts)
+                .setMessage(R.string.dialog_message_sync_contacts)
+                .setPositiveButton(R.string.dialog_sync_confirm) { _, _ -> doApplyRemoteContacts(incoming) }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return
+        }
+        doApplyRemoteContacts(incoming)
+    }
+
+    private fun doApplyRemoteContacts(incoming: MutableList<Contact>)
+    {
         contacts.clear()
         contacts.addAll(incoming)
         currentIndex = 0

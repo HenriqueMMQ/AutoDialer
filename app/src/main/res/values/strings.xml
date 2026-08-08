@@ -107,8 +107,13 @@
 
     <!-- Replace contacts confirmation -->
     <string name="dialog_title_replace_contacts">Substituir lista?</string>
-    <string name="dialog_message_replace_contacts">Já existe uma lista carregada. Carregas um novo ficheiro irá apagar permanentemente a lista atual e todos os resultados não partilhados. Continuar?</string>
+    <string name="dialog_message_replace_contacts">Já existe uma lista carregada. Carregar um novo ficheiro irá apagar permanentemente a lista atual e todos os resultados não partilhados.\n\nExporta o Excel primeiro para não perder os dados. Continuar?</string>
     <string name="dialog_replace_confirm">Substituir</string>
+
+    <!-- Sync from backoffice confirmation -->
+    <string name="dialog_title_sync_contacts">Sincronizar lista?</string>
+    <string name="dialog_message_sync_contacts">O backoffice está a enviar uma nova lista de contactos. Isto irá substituir permanentemente a lista atual e todos os resultados não partilhados.\n\nExporta o Excel primeiro para não perder os dados. Continuar?</string>
+    <string name="dialog_sync_confirm">Sincronizar</string>
 
     <!-- Do Not Call -->
     <string name="status_dnc">Não Ligar</string>
