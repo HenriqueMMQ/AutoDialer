@@ -101,25 +101,17 @@
                         android:layout_height="44dp"
                         android:layout_weight="1"
                         android:text="@string/btn_load"
-                        android:backgroundTint="#1565C0"
+                        android:backgroundTint="@color/color_primary"
                         android:maxLines="1"
                         android:visibility="gone" />
                 </LinearLayout>
-
-                <Button
-                    android:id="@+id/btnAddContact"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:text="@string/btn_add_contact"
-                    android:backgroundTint="#546E7A"
-                    android:layout_marginBottom="8dp" />
 
                 <Button
                     android:id="@+id/btnShareResults"
                     android:layout_width="match_parent"
                     android:layout_height="44dp"
                     android:text="@string/btn_share_results"
-                    android:backgroundTint="#1565C0"
+                    android:backgroundTint="@color/color_primary"
                     android:visibility="gone"
                     android:layout_marginBottom="8dp" />
 
@@ -142,17 +134,29 @@
             android:layout_marginBottom="12dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            app:cardBackgroundColor="#F0F4FF">
+            app:cardBackgroundColor="@color/color_surface_list">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:paddingBottom="88dp"
+                android:paddingBottom="140dp"
                 android:clipToPadding="false" />
         </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnAddContact"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="20dp"
+        android:src="@android:drawable/ic_input_add"
+        android:contentDescription="@string/btn_add_contact"
+        app:backgroundTint="@color/color_index_text"
+        app:tint="#FFFFFF"
+        app:fabSize="normal" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnDial"
@@ -163,7 +167,7 @@
         android:src="@drawable/ic_phone_white"
         android:contentDescription="@string/fab_dial_description"
         android:enabled="false"
-        app:backgroundTint="#2E7D32"
+        app:backgroundTint="@color/color_secondary_green"
         app:tint="#FFFFFF"
         app:fabSize="normal" />
 

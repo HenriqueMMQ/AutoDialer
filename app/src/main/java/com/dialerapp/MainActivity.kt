@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity()
     private lateinit var btnLoad: Button
     private lateinit var btnDial: FloatingActionButton
     private lateinit var btnReload: Button
-    private lateinit var btnAddContact: Button
+    private lateinit var btnAddContact: FloatingActionButton
     private lateinit var btnShareResults: Button
     private lateinit var btnSettings: Button
     private lateinit var statusText: TextView
@@ -340,7 +340,7 @@ class MainActivity : AppCompatActivity()
         {
             text = getString(R.string.dialog_notes_label)
             textSize = 13f
-            setTextColor(0xFF666666.toInt())
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.color_text_secondary))
             setPadding(0, padding, 0, 4)
         })
 
@@ -788,7 +788,7 @@ class MainActivity : AppCompatActivity()
             container.addView(TextView(this).apply {
                 text = label
                 textSize = 12f
-                setTextColor(0xFF546E7A.toInt())
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.color_index_text))
                 setPadding(0, (8 * dp).toInt(), 0, (2 * dp).toInt())
             })
             return EditText(this).apply {
