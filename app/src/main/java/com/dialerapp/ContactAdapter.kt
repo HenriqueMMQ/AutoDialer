@@ -12,27 +12,32 @@ class ContactAdapter(
     private var contacts: List<Contact>,
     private var currentIndex: Int,
     private val onItemClick: (Int) -> Unit
-) : RecyclerView.Adapter<ContactAdapter.ViewHolder>() {
+) : RecyclerView.Adapter<ContactAdapter.ViewHolder>()
+{
 
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view)
+    {
         val tvId: TextView = view.findViewById(R.id.tvId)
         val tvName: TextView = view.findViewById(R.id.tvName)
         val tvPhone: TextView = view.findViewById(R.id.tvPhone)
         val tvStatus: TextView = view.findViewById(R.id.tvStatus)
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder
+    {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_contact, parent, false)
         return ViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: ViewHolder, position: Int)
+    {
         val contact = contacts[position]
         holder.tvId.text = contact.id.toString()
         holder.tvName.text = contact.name
         holder.tvPhone.text = contact.phone
-        holder.tvStatus.text = when (contact.status) {
+        holder.tvStatus.text = when (contact.status)
+        {
             "pending"        -> holder.itemView.context.getString(R.string.status_pending)
             "dialing"        -> holder.itemView.context.getString(R.string.status_dialing)
             "dialed"         -> holder.itemView.context.getString(R.string.status_dialed)
@@ -46,16 +51,20 @@ class ContactAdapter(
         }
 
         // Highlight current row
-        if (position == currentIndex) {
+        if (position == currentIndex)
+        {
             holder.itemView.setBackgroundColor(Color.parseColor("#E3F2FD"))
             holder.tvName.setTypeface(null, Typeface.BOLD)
-        } else {
+        }
+        else
+        {
             holder.itemView.setBackgroundColor(Color.TRANSPARENT)
             holder.tvName.setTypeface(null, Typeface.NORMAL)
         }
 
         // Color-code status
-        holder.tvStatus.setTextColor(when (contact.status) {
+        holder.tvStatus.setTextColor(when (contact.status)
+        {
             "pending" -> Color.GRAY
             "dialing", "dialed" -> Color.parseColor("#1565C0")
             "answered" -> Color.parseColor("#2E7D32")
@@ -70,7 +79,8 @@ class ContactAdapter(
 
     override fun getItemCount() = contacts.size
 
-    fun updateData(newContacts: List<Contact>, newIndex: Int) {
+    fun updateData(newContacts: List<Contact>, newIndex: Int)
+    {
         contacts = newContacts
         currentIndex = newIndex
         notifyDataSetChanged()

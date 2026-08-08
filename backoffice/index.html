@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoDialer — Backoffice</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0D1117;
+    --surface:   #161B22;
+    --surface-2: #21262D;
+    --border:    #30363D;
+    --accent:    #2F81F7;
+    --accent-dim:#1A4A8A;
+    --text:      #E6EDF3;
+    --muted:     #7D8590;
+    --green:     #3FB950;
+    --yellow:    #D29922;
+    --red:       #F85149;
+    --orange:    #DB6D28;
+    --purple:    #A371F7;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:        #F6F8FA;
+      --surface:   #FFFFFF;
+      --surface-2: #EFF1F3;
+      --border:    #D0D7DE;
+      --accent:    #0969DA;
+      --accent-dim:#DDF4FF;
+      --text:      #1F2328;
+      --muted:     #656D76;
+      --green:     #1A7F37;
+      --yellow:    #9A6700;
+      --red:       #CF222E;
+      --orange:    #BC4C00;
+      --purple:    #8250DF;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg:#F6F8FA;--surface:#FFFFFF;--surface-2:#EFF1F3;--border:#D0D7DE;
+    --accent:#0969DA;--accent-dim:#DDF4FF;--text:#1F2328;--muted:#656D76;
+    --green:#1A7F37;--yellow:#9A6700;--red:#CF222E;--orange:#BC4C00;--purple:#8250DF;
+  }
+  :root[data-theme="dark"] {
+    --bg:#0D1117;--surface:#161B22;--surface-2:#21262D;--border:#30363D;
+    --accent:#2F81F7;--accent-dim:#1A4A8A;--text:#E6EDF3;--muted:#7D8590;
+    --green:#3FB950;--yellow:#D29922;--red:#F85149;--orange:#DB6D28;--purple:#A371F7;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    display: flex;
+    height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────── */
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .sidebar-logo {
+    padding: 20px 16px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 30px; height: 30px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-icon svg { width: 16px; height: 16px; fill: #fff; }
+  .logo-text { font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
+  .logo-sub  { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .sidebar-nav { padding: 12px 8px; flex: 1; }
+  .nav-section-label {
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); padding: 8px 8px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 6px; cursor: pointer;
+    color: var(--muted); font-size: 13px; font-weight: 500;
+    user-select: none; transition: background 0.1s, color 0.1s; margin-bottom: 1px;
+  }
+  .nav-item:hover  { background: var(--surface-2); color: var(--text); }
+  .nav-item.active { background: var(--accent-dim); color: var(--accent); }
+  .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 600;
+    padding: 1px 6px; border-radius: 20px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .phone-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--green) 25%, transparent);
+    flex-shrink: 0;
+  }
+  .status-dot.offline { background: var(--muted); box-shadow: none; }
+
+  /* ── MAIN ────────────────────────────────── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 24px; height: 52px;
+    display: flex; align-items: center; gap: 20px; flex-shrink: 0;
+  }
+  .topbar-title { font-size: 14px; font-weight: 600; }
+  .topbar-stats { display: flex; gap: 16px; margin-left: 20px; }
+  .stat { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+  .stat strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  .topbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+    transition: background 0.1s, border-color 0.1s; white-space: nowrap;
+  }
+  .btn:hover { background: var(--border); }
+  .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: color-mix(in srgb, var(--accent) 85%, #000); border-color: color-mix(in srgb, var(--accent) 85%, #000); }
+  .btn-icon { padding: 5px; background: transparent; border: 1px solid transparent; color: var(--muted); }
+  .btn-icon:hover { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+
+  .content {
+    flex: 1; overflow-y: auto; padding: 20px 24px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  /* ── DROP ZONE ───────────────────────────── */
+  .dropzone {
+    border: 1.5px dashed var(--border); border-radius: 8px;
+    padding: 28px 24px; display: flex; align-items: center; gap: 16px;
+    cursor: pointer; background: var(--surface);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  }
+  .dropzone-icon {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .dropzone-icon svg { width: 18px; height: 18px; color: var(--muted); }
+  .dropzone-text strong { font-size: 13px; font-weight: 600; display: block; }
+  .dropzone-text span { font-size: 12px; color: var(--muted); }
+  .dropzone-link { color: var(--accent); text-decoration: none; }
+  .dropzone-link:hover { text-decoration: underline; }
+
+  /* ── FILTER BAR ──────────────────────────── */
+  .filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 280px; }
+  .search-wrap svg {
+    position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+    width: 13px; height: 13px; color: var(--muted); pointer-events: none;
+  }
+  .search-input {
+    width: 100%; padding: 5px 10px 5px 30px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 12px; outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+  .filter-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+  .pill {
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); transition: all 0.1s; white-space: nowrap;
+  }
+  .pill:hover { border-color: var(--muted); color: var(--text); }
+  .pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  /* ── TABLE ───────────────────────────────── */
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; overflow-x: auto; flex: 1;
+  }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  thead th {
+    background: var(--surface-2); padding: 9px 12px; text-align: left;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; user-select: none;
+  }
+  thead th:first-child { padding-left: 16px; }
+  thead th.sortable { cursor: pointer; }
+  thead th.sortable:hover { color: var(--text); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.08s; cursor: pointer; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  tbody tr.current-row { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+  tbody tr.current-row:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+  td { padding: 9px 12px; font-size: 12px; vertical-align: middle; }
+  td:first-child { padding-left: 16px; }
+  .td-num { color: var(--muted); font-size: 11px; width: 32px; }
+  .td-name { font-weight: 500; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-phone { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+  .td-notes { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .td-time { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .td-actions { text-align: right; padding-right: 12px; white-space: nowrap; }
+
+  /* ── STATUS CHIPS ────────────────────────── */
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; white-space: nowrap;
+  }
+  .chip::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .chip-pending        { background: color-mix(in srgb, var(--muted) 15%, transparent); color: var(--muted); }
+  .chip-pending::before { background: var(--muted); }
+  .chip-dialing        { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+  .chip-dialing::before { background: var(--accent); }
+  .chip-answered       { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+  .chip-answered::before { background: var(--green); }
+  .chip-no_answer      { background: color-mix(in srgb, var(--orange) 15%, transparent); color: var(--orange); }
+  .chip-no_answer::before { background: var(--orange); }
+  .chip-busy           { background: color-mix(in srgb, var(--yellow) 15%, transparent); color: var(--yellow); }
+  .chip-busy::before   { background: var(--yellow); }
+  .chip-callback_later { background: color-mix(in srgb, var(--purple) 15%, transparent); color: var(--purple); }
+  .chip-callback_later::before { background: var(--purple); }
+  .chip-not_interested { background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--red); }
+  .chip-not_interested::before { background: var(--red); }
+  .chip-wrong_number   { background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--red); }
+  .chip-wrong_number::before { background: var(--red); }
+
+  /* ── CALL BAR ────────────────────────────── */
+  .callbar {
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+  }
+  .callbar-contact { flex: 1; min-width: 0; }
+  .callbar-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .callbar-name  { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .callbar-phone { font-family: 'Courier New', Courier, monospace; font-size: 13px; color: var(--muted); }
+  .callbar-progress { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+  .callbar-progress strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  .progress-bar { width: 120px; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; border: 1px solid var(--border); }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+
+  .empty-state { padding: 60px 24px; text-align: center; color: var(--muted); }
+  .empty-state svg { width: 40px; height: 40px; margin: 0 auto 12px; display: block; opacity: 0.4; }
+  .empty-state p { font-size: 13px; margin-top: 4px; }
+  .empty-state strong { display: block; font-size: 14px; color: var(--text); }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">AutoDialer</div>
+      <div class="logo-sub">Backoffice</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Workspace</div>
+    <div class="nav-item active" onclick="setNav(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Contacts
+      <span class="nav-badge" id="nb-contacts">0</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Activity
+    </div>
+    <div class="nav-section-label" style="margin-top:16px">Settings</div>
+    <div class="nav-item" onclick="setNav(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Devices
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Preferences
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="phone-status">
+      <span class="status-dot offline" id="phone-dot"></span>
+      <span id="phone-status-text">Server offline</span>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">Contacts</div>
+    <div class="topbar-stats">
+      <div class="stat"><strong id="stat-total">0</strong>&nbsp;total</div>
+      <div class="stat" style="color:var(--green)"><strong id="stat-answered" style="color:var(--green)">0</strong>&nbsp;answered</div>
+      <div class="stat" style="color:var(--orange)"><strong id="stat-pending" style="color:var(--orange)">0</strong>&nbsp;pending</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-icon" onclick="toggleTheme()" title="Toggle theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button class="btn" id="btn-clear" onclick="clearContacts()" style="display:none">Clear list</button>
+      <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Import Excel
+      </button>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this)">
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="dropzone" id="dropzone"
+      ondragover="doDragOver(event)" ondragleave="doDragLeave(event)" ondrop="doDrop(event)"
+      onclick="document.getElementById('file-input').click()">
+      <div class="dropzone-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      </div>
+      <div class="dropzone-text">
+        <strong>Drop your Excel file here</strong>
+        <span>or <a class="dropzone-link" onclick="event.stopPropagation()">browse</a> — .xlsx, .xls supported</span>
+      </div>
+      <button class="btn" style="margin-left:auto" onclick="loadSampleData(event)">Load sample data</button>
+    </div>
+
+    <div class="filter-bar" id="filter-bar" style="display:none">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" type="text" placeholder="Search name or phone…" oninput="filterTable(this.value)" id="search-input">
+      </div>
+      <div class="filter-pills">
+        <div class="pill active" onclick="setFilter('all',this)">All</div>
+        <div class="pill" onclick="setFilter('pending',this)">Pending</div>
+        <div class="pill" onclick="setFilter('answered',this)">Answered</div>
+        <div class="pill" onclick="setFilter('no_answer',this)">No answer</div>
+        <div class="pill" onclick="setFilter('callback_later',this)">Callback</div>
+        <div class="pill" onclick="setFilter('not_interested',this)">Not interested</div>
+      </div>
+    </div>
+
+    <div class="table-wrap" id="table-wrap">
+      <div class="empty-state" id="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <strong>No contacts loaded</strong>
+        <p>Import an Excel file or load the sample data to get started.</p>
+      </div>
+      <table id="contacts-table" style="display:none">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="sortable" onclick="sortBy('name')">Name ↕</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Called at</th>
+            <th>Notes</th>
+            <th style="text-align:right;padding-right:12px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="contacts-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callbar" id="callbar" style="display:none">
+    <div class="callbar-contact">
+      <div class="callbar-label">Up next</div>
+      <div class="callbar-name" id="cb-name">—</div>
+      <div class="callbar-phone" id="cb-phone">—</div>
+    </div>
+    <div class="callbar-progress">
+      <div><strong id="cb-done">0</strong> / <strong id="cb-total">0</strong> called</div>
+      <div class="progress-bar"><div class="progress-fill" id="cb-bar" style="width:0%"></div></div>
+    </div>
+    <button class="btn btn-primary" onclick="promptCall()" id="btn-call">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+      Send to phone
+    </button>
+    <button class="btn" onclick="skipContact()">Skip</button>
+  </div>
+</div>
+
+<div id="toast" style="
+  position:fixed;bottom:24px;right:24px;
+  background:var(--surface);border:1px solid var(--border);
+  padding:10px 16px;border-radius:8px;font-size:13px;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);
+  transform:translateY(80px);opacity:0;
+  transition:transform .2s,opacity .2s;
+  z-index:100;max-width:300px;
+"></div>
+
+<script>
+const API = 'http://localhost:3000';
+
+let contacts = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let currentIndex  = 0;
+
+const STATUS_LABELS = {
+  pending:'Pending', dialing:'Dialing', answered:'Answered',
+  no_answer:'No answer', busy:'Busy', callback_later:'Callback',
+  not_interested:'Not interested', wrong_number:'Wrong number', dialed:'Dialed'
+};
+
+// ── SERVER POLLING ────────────────────────────
+async function pollServer()
+{
+  try
+  {
+    const res = await fetch(`${API}/api/status`, { signal: AbortSignal.timeout(2000) });
+    if (res.ok)
+    {
+      document.getElementById('phone-dot').classList.remove('offline');
+      document.getElementById('phone-status-text').textContent = 'Server online';
+    }
+  }
+  catch
+  {
+    document.getElementById('phone-dot').classList.add('offline');
+    document.getElementById('phone-status-text').textContent = 'Server offline';
+  }
+}
+setInterval(pollServer, 5000);
+pollServer();
+
+// ── FILE HANDLING ─────────────────────────────
+async function handleFile(input)
+{
+  const file = input.files[0];
+  if (!file) return;
+  const form = new FormData();
+  form.append('file', file);
+  try
+  {
+    const res = await fetch(`${API}/api/contacts/upload`, { method: 'POST', body: form });
+    const data = await res.json();
+    contacts = data.contacts;
+    currentIndex = contacts.findIndex(c => c.status === 'pending');
+    if (currentIndex === -1) currentIndex = contacts.length;
+    refresh();
+    toast(`Loaded ${contacts.length} contacts from "${file.name}"`);
+  }
+  catch
+  {
+    toast(`Server not reachable — running in offline mode`, 4000);
+  }
+  input.value = '';
+}
+
+function doDragOver(e)  { e.preventDefault(); document.getElementById('dropzone').classList.add('drag-over'); }
+function doDragLeave()  { document.getElementById('dropzone').classList.remove('drag-over'); }
+function doDrop(e)
+{
+  e.preventDefault(); doDragLeave();
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById('file-input').files = e.dataTransfer.files; handleFile(document.getElementById('file-input')); }
+}
+
+// ── SAMPLE DATA ───────────────────────────────
+function loadSampleData(e)
+{
+  e.stopPropagation();
+  contacts = [
+    { id:1,  name:'Ana Ferreira',  phone:'912 345 678', status:'answered',      calledAt:'14:02', notes:'Interested in the offer' },
+    { id:2,  name:'Bruno Sousa',   phone:'963 100 221', status:'no_answer',     calledAt:'14:08', notes:'' },
+    { id:3,  name:'Carla Mendes',  phone:'935 772 401', status:'callback_later',calledAt:'14:15', notes:'Call back after 17h' },
+    { id:4,  name:'Diogo Alves',   phone:'910 080 345', status:'pending',       calledAt:'',      notes:'' },
+    { id:5,  name:'Eva Rodrigues', phone:'927 654 321', status:'pending',       calledAt:'',      notes:'' },
+    { id:6,  name:'Fábio Costa',   phone:'961 234 567', status:'not_interested',calledAt:'14:30', notes:'Do not call again' },
+    { id:7,  name:'Graça Lopes',   phone:'912 999 001', status:'pending',       calledAt:'',      notes:'' },
+    { id:8,  name:'Hugo Martins',  phone:'935 001 889', status:'busy',          calledAt:'14:45', notes:'' },
+    { id:9,  name:'Inês Pinto',    phone:'963 445 220', status:'pending',       calledAt:'',      notes:'' },
+    { id:10, name:'João Silva',    phone:'912 113 774', status:'answered',      calledAt:'15:00', notes:'Requested proposal by email' },
+  ];
+  currentIndex = contacts.findIndex(c => c.status === 'pending');
+  if (currentIndex === -1) currentIndex = contacts.length;
+  refresh();
+  toast('Sample data loaded — 10 contacts');
+}
+
+// ── RENDER ────────────────────────────────────
+function refresh()
+{
+  const total    = contacts.length;
+  const answered = contacts.filter(c => c.status === 'answered').length;
+  const pending  = contacts.filter(c => c.status === 'pending').length;
+
+  document.getElementById('stat-total').textContent    = total;
+  document.getElementById('stat-answered').textContent = answered;
+  document.getElementById('stat-pending').textContent  = pending;
+  document.getElementById('nb-contacts').textContent   = total;
+  document.getElementById('btn-clear').style.display   = total ? '' : 'none';
+
+  const has = total > 0;
+  document.getElementById('filter-bar').style.display      = has ? '' : 'none';
+  document.getElementById('empty-state').style.display     = has ? 'none' : '';
+  document.getElementById('contacts-table').style.display  = has ? '' : 'none';
+  document.getElementById('callbar').style.display         = has ? '' : 'none';
+
+  renderTable();
+  updateCallbar();
+}
+
+function renderTable()
+{
+  const q = currentSearch.toLowerCase();
+  const rows = contacts.filter(c =>
+  {
+    if (currentFilter !== 'all' && c.status !== currentFilter) return false;
+    if (q && !c.name.toLowerCase().includes(q) && !c.phone.includes(q)) return false;
+    return true;
+  });
+
+  document.getElementById('contacts-tbody').innerHTML = rows.map(c => `
+    <tr class="${c.id - 1 === currentIndex ? 'current-row' : ''}" onclick="selectRow(${c.id - 1})">
+      <td class="td-num">${c.id}</td>
+      <td class="td-name">${esc(c.name)}</td>
+      <td class="td-phone">${esc(c.phone)}</td>
+      <td><span class="chip chip-${c.status}">${STATUS_LABELS[c.status] || c.status}</span></td>
+      <td class="td-time">${c.calledAt || '—'}</td>
+      <td class="td-notes">${esc(c.notes) || '<span style="color:var(--muted)">—</span>'}</td>
+      <td class="td-actions">
+        ${c.status === 'pending' || c.status === 'dialed'
+          ? `<button class="btn" onclick="event.stopPropagation();dialContact(${c.id-1})">
+               <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+               Call
+             </button>`
+          : `<button class="btn btn-icon" onclick="event.stopPropagation();resetContact(${c.id-1})" title="Reset to pending">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+             </button>`}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function updateCallbar()
+{
+  const next  = contacts.find((c, i) => i >= currentIndex && c.status === 'pending')
+             || contacts.find(c => c.status === 'pending');
+  const done  = contacts.filter(c => c.status !== 'pending').length;
+  const total = contacts.length;
+
+  document.getElementById('cb-done').textContent  = done;
+  document.getElementById('cb-total').textContent = total;
+  document.getElementById('cb-bar').style.width   = total ? (done / total * 100) + '%' : '0%';
+
+  if (next)
+  {
+    document.getElementById('cb-name').textContent  = next.name;
+    document.getElementById('cb-phone').textContent = next.phone;
+    document.getElementById('btn-call').disabled = false;
+  }
+  else
+  {
+    document.getElementById('cb-name').textContent  = 'All contacts dialed';
+    document.getElementById('cb-phone').textContent = '—';
+    document.getElementById('btn-call').disabled = true;
+  }
+}
+
+// ── ACTIONS ───────────────────────────────────
+function selectRow(idx) { currentIndex = idx; renderTable(); updateCallbar(); }
+function dialContact(idx) { currentIndex = idx; promptCall(); }
+
+async function promptCall()
+{
+  const c = contacts[currentIndex];
+  if (!c) return;
+  contacts[currentIndex].status = 'dialing';
+  renderTable(); updateCallbar();
+  try
+  {
+    await fetch(`${API}/api/dial`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactId: c.id, name: c.name, phone: c.phone })
+    });
+    toast(`Sent "${c.name} — ${c.phone}" to phone`);
+  }
+  catch
+  {
+    toast(`Server offline — command queued locally`, 3000);
+  }
+}
+
+function skipContact()
+{
+  if (currentIndex < contacts.length - 1) { currentIndex++; renderTable(); updateCallbar(); }
+}
+
+function resetContact(idx)
+{
+  contacts[idx].status = 'pending'; contacts[idx].calledAt = ''; contacts[idx].notes = '';
+  refresh();
+}
+
+function clearContacts()
+{
+  contacts = []; currentIndex = 0; currentSearch = '';
+  document.getElementById('search-input').value = '';
+  currentFilter = 'all';
+  document.querySelectorAll('.pill').forEach((p, i) => p.classList.toggle('active', i === 0));
+  refresh();
+  toast('Contact list cleared');
+}
+
+// ── FILTER / SORT ─────────────────────────────
+function setFilter(f, el)
+{
+  currentFilter = f;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+function filterTable(q) { currentSearch = q; renderTable(); }
+let sortDir = 1;
+function sortBy(key)
+{
+  sortDir *= -1;
+  contacts.sort((a, b) => String(a[key]).localeCompare(String(b[key])) * sortDir);
+  renderTable();
+}
+
+// ── THEME ─────────────────────────────────────
+function toggleTheme()
+{
+  const root = document.documentElement;
+  root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+
+function setNav(el)
+{
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+let toastTimer;
+function toast(msg, duration = 2500)
+{
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.transform = 'translateY(0)'; t.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.transform = 'translateY(80px)'; t.style.opacity = '0'; }, duration);
+}
+
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+refresh();
+</script>
+</body>
+</html>

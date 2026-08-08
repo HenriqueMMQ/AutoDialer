@@ -6,9 +6,11 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
-class SettingsActivity : AppCompatActivity() {
+class SettingsActivity : AppCompatActivity()
+{
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?)
+    {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
@@ -22,8 +24,10 @@ class SettingsActivity : AppCompatActivity() {
         seekDelay.progress = savedDelay
         txtDelayValue.text = getString(R.string.settings_delay_seconds, savedDelay)
 
-        seekDelay.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+        seekDelay.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener
+        {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean)
+            {
                 txtDelayValue.text = getString(R.string.settings_delay_seconds, progress)
                 prefs.edit().putInt("autoCallDelay", progress).apply()
             }

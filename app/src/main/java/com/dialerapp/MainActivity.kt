@@ -37,9 +37,10 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.core.content.edit
 
-class MainActivity : AppCompatActivity() {
-
+class MainActivity : AppCompatActivity()
+{
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: ContactAdapter
     private lateinit var btnLoad: Button
@@ -59,10 +60,10 @@ class MainActivity : AppCompatActivity() {
     private var autoCallRunnable: Runnable? = null
     private var countdownSnackbar: Snackbar? = null
 
-    private val filePicker = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let {
+    private val filePicker = registerForActivityResult(ActivityResultContracts.OpenDocument())
+    { uri ->
+        uri?.let()
+        {
             contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             val fileName = it.lastPathSegment?.substringAfterLast("/") ?: getString(R.string.file_fallback_name)
             prefs.edit()
@@ -74,14 +75,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val callPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) dialCurrent()
-        else Toast.makeText(this, R.string.toast_permission_required, Toast.LENGTH_LONG).show()
+    private val callPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission())
+    {
+        granted ->
+            if (granted)
+                dialCurrent()
+            else
+                Toast.makeText(this, R.string.toast_permission_required, Toast.LENGTH_LONG).show()
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?)
+    {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -93,99 +97,109 @@ class MainActivity : AppCompatActivity() {
         btnShareResults = findViewById(R.id.btnShareResults)
         btnSettings = findViewById(R.id.btnSettings)
 
-        btnSettings.setOnClickListener {
+        btnSettings.setOnClickListener()
+        {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
         statusText = findViewById(R.id.statusText)
         checkAutoCall = findViewById(R.id.checkAutoCall)
 
         checkAutoCall.isChecked = prefs.getBoolean("autoCall", false)
-        checkAutoCall.setOnCheckedChangeListener { _, checked ->
+        checkAutoCall.setOnCheckedChangeListener()
+        { _, checked ->
             prefs.edit().putBoolean("autoCall", checked).apply()
         }
 
         prefs.getString("lastFileName", null)?.let { updateReloadButton(it) }
 
-        btnLoad.setOnClickListener {
+        btnLoad.setOnClickListener()
+        {
             filePicker.launch(arrayOf(
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "application/vnd.ms-excel"
             ))
         }
 
-        btnReload.setOnClickListener {
+        btnReload.setOnClickListener()
+        {
             val uriString = prefs.getString("lastFileUri", null) ?: return@setOnClickListener
             loadExcelFile(Uri.parse(uriString))
         }
 
         btnShareResults.setOnClickListener { shareResults() }
 
-        btnDial.setOnClickListener {
-            if (currentIndex >= contacts.size) {
+        btnDial.setOnClickListener()
+        {
+            if (currentIndex >= contacts.size)
+            {
                 Toast.makeText(this, R.string.toast_queue_complete, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED)
                 callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
-            } else {
+            else
                 dialCurrent()
-            }
         }
 
         restoreState()
 
-        if (savedInstanceState == null) {
+        if (savedInstanceState == null)
             handleIncomingIntent(intent)
-        }
 
         refreshUI()
     }
 
-    override fun onNewIntent(intent: Intent) {
+    override fun onNewIntent(intent: Intent)
+    {
         super.onNewIntent(intent)
         handleIncomingIntent(intent)
     }
 
-    private fun handleIncomingIntent(intent: Intent) {
-        val uri: Uri? = when (intent.action) {
+    private fun handleIncomingIntent(intent: Intent)
+    {
+        val uri: Uri? = when (intent.action)
+        {
             Intent.ACTION_VIEW -> intent.data
-            Intent.ACTION_SEND -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Intent.ACTION_SEND ->
+            {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                     intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-                } else {
+                else
+                {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra(Intent.EXTRA_STREAM)
                 }
             }
             else -> null
         }
-        if (uri != null) {
-            val fileName = uri.lastPathSegment?.substringAfterLast("/")
-                ?: getString(R.string.file_fallback_name)
+        if (uri != null)
+        {
+            val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: getString(R.string.file_fallback_name)
             prefs.edit()
-                .putString("lastFileUri", uri.toString())
-                .putString("lastFileName", fileName)
-                .apply()
+            {
+                putString("lastFileUri", uri.toString())
+                    .putString("lastFileName", fileName)
+            }
             updateReloadButton(fileName)
             loadExcelFile(uri)
             intent.action = null
         }
     }
 
-    private fun updateReloadButton(fileName: String) {
+    private fun updateReloadButton(fileName: String)
+    {
         btnReload.text = getString(R.string.btn_reload, fileName)
         btnReload.visibility = android.view.View.VISIBLE
     }
 
-    private fun loadExcelFile(uri: Uri) {
-        try {
-            val inputStream = contentResolver.openInputStream(uri)
-                ?: throw Exception(getString(R.string.error_cannot_open))
+    private fun loadExcelFile(uri: Uri)
+    {
+        try
+        {
+            val inputStream = contentResolver.openInputStream(uri) ?: throw Exception(getString(R.string.error_cannot_open))
 
-            val ext = prefs.getString("lastFileName", "ficheiro.xlsx")
-                ?.substringAfterLast(".", "xlsx") ?: "xlsx"
+            val ext = prefs.getString("lastFileName", "ficheiro.xlsx")?.substringAfterLast(".", "xlsx") ?: "xlsx"
             val templateFile = File(getExternalFilesDir(null), "template.$ext")
             FileOutputStream(templateFile).use { inputStream.copyTo(it) }
             inputStream.close()
@@ -197,9 +211,11 @@ class MainActivity : AppCompatActivity() {
             val headerRow = sheet.getRow(0) ?: throw Exception(getString(R.string.error_empty_sheet))
             var nameCol = -1
             var phoneCol = -1
-            for (c in 0 until headerRow.lastCellNum) {
+            for (c in 0 until headerRow.lastCellNum)
+            {
                 val header = headerRow.getCell(c)?.stringCellValue?.trim() ?: ""
-                when {
+                when
+                {
                     header.equals("Name", ignoreCase = true) ||
                     header.equals("Nome", ignoreCase = true) -> nameCol = c
                     header.contains("Phone", ignoreCase = true) ||
@@ -208,26 +224,32 @@ class MainActivity : AppCompatActivity() {
                     header.contains("Número", ignoreCase = true) -> phoneCol = c
                 }
             }
-            if (phoneCol == -1) throw Exception(getString(R.string.error_no_phone_column))
+            if (phoneCol == -1)
+                throw Exception(getString(R.string.error_no_phone_column))
 
-            for (i in 1..sheet.lastRowNum) {
+            for (i in 1..sheet.lastRowNum)
+            {
                 val row = sheet.getRow(i) ?: continue
-                val phone = when (row.getCell(phoneCol)?.cellType) {
+                val phone = when (row.getCell(phoneCol)?.cellType)
+                {
                     org.apache.poi.ss.usermodel.CellType.NUMERIC ->
                         row.getCell(phoneCol).numericCellValue.toLong().toString()
                     else ->
                         row.getCell(phoneCol)?.stringCellValue?.trim() ?: ""
                 }
-                if (phone.isBlank()) continue
+                if (phone.isBlank())
+                    continue
 
-                val name = if (nameCol >= 0) {
-                    row.getCell(nameCol)?.stringCellValue?.trim()
-                        ?: getString(R.string.unknown_contact)
-                } else getString(R.string.unknown_contact)
+                val contactName = if (nameCol >= 0)
+                {
+                    row.getCell(nameCol)?.stringCellValue?.trim() ?: getString(R.string.unknown_contact)
+                }
+                else
+                    getString(R.string.unknown_contact)
 
                 newContacts.add(Contact(
                     id = newContacts.size + 1,
-                    name = name,
+                    name = contactName,
                     phone = phone,
                     status = "pending"
                 ))
@@ -242,19 +264,24 @@ class MainActivity : AppCompatActivity() {
 
             Toast.makeText(this, getString(R.string.toast_loaded, contacts.size), Toast.LENGTH_SHORT).show()
 
-        } catch (e: Exception) {
+        }
+        catch (e: Exception)
+        {
             Toast.makeText(this, getString(R.string.toast_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun dialCurrent() {
-        if (currentIndex >= contacts.size) return
+    private fun dialCurrent()
+    {
+        if (currentIndex >= contacts.size)
+            return
         val contact = contacts[currentIndex]
         contact.status = "dialing"
         saveState()
         refreshUI()
 
-        val intent = Intent(Intent.ACTION_CALL).apply {
+        val intent = Intent(Intent.ACTION_CALL).apply()
+        {
             data = Uri.parse("tel:${contact.phone}")
         }
         startActivity(intent)
@@ -265,7 +292,8 @@ class MainActivity : AppCompatActivity() {
         showDispositionDialog()
     }
 
-    private fun showDispositionDialog() {
+    private fun showDispositionDialog()
+    {
         val options = arrayOf(
             getString(R.string.dialog_option_answered),
             getString(R.string.dialog_option_no_answer),
@@ -274,19 +302,20 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.dialog_option_not_interested),
             getString(R.string.dialog_option_wrong_number)
         )
-        val statusKeys = arrayOf(
-            "answered", "no_answer", "busy", "callback_later", "not_interested", "wrong_number"
-        )
+        val statusKeys = arrayOf("answered", "no_answer", "busy", "callback_later", "not_interested", "wrong_number")
         val padding = (20 * resources.displayMetrics.density).toInt()
 
-        val container = LinearLayout(this).apply {
+        val container = LinearLayout(this).apply()
+        {
             orientation = LinearLayout.VERTICAL
             setPadding(padding * 2, padding, padding * 2, 0)
         }
 
         val radioGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        options.forEach { option ->
-            radioGroup.addView(RadioButton(this).apply {
+        options.forEach()
+        { option ->
+            radioGroup.addView(RadioButton(this).apply()
+            {
                 text = option
                 textSize = 15f
             })
@@ -294,26 +323,30 @@ class MainActivity : AppCompatActivity() {
         (radioGroup.getChildAt(0) as RadioButton).isChecked = true
         container.addView(radioGroup)
 
-        container.addView(TextView(this).apply {
+        container.addView(TextView(this).apply()
+        {
             text = getString(R.string.dialog_notes_label)
             textSize = 13f
             setTextColor(0xFF666666.toInt())
             setPadding(0, padding, 0, 4)
         })
 
-        val notesInput = EditText(this).apply {
+        val notesInput = EditText(this).apply()
+        {
             hint = getString(R.string.dialog_notes_hint)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            minLines = 2
-            maxLines = 4
+            this.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            this.minLines = 2
+            this.maxLines = 4
         }
         container.addView(notesInput)
 
         AlertDialog.Builder(this)
             .setTitle(R.string.dialog_title_call_result)
             .setView(container)
-            .setPositiveButton(R.string.dialog_save) { _, _ ->
-                if (currentIndex < contacts.size) {
+            .setPositiveButton(R.string.dialog_save)
+            { _, _ ->
+                if (currentIndex < contacts.size)
+                {
                     val selectedId = radioGroup.checkedRadioButtonId
                     val selectedIndex = radioGroup.indexOfChild(radioGroup.findViewById(selectedId))
                     val contact = contacts[currentIndex]
@@ -324,7 +357,8 @@ class MainActivity : AppCompatActivity() {
                     saveState()
                     exportResultsSilently()
                     refreshUI()
-                    if (checkAutoCall.isChecked && currentIndex < contacts.size) {
+                    if (checkAutoCall.isChecked && currentIndex < contacts.size)
+                    {
                         scheduleAutoCall()
                     }
                 }
@@ -333,13 +367,15 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun resultsFile(): File {
+    private fun resultsFile(): File
+    {
         val originalName = prefs.getString("lastFileName", "contactos") ?: "contactos"
         val resultsName = originalName.substringBeforeLast(".") + "_resultados.xlsx"
         return File(getExternalFilesDir(null), resultsName)
     }
 
-    private fun statusLabel(status: String): String = when (status) {
+    private fun statusLabel(status: String): String = when (status)
+    {
         "answered"       -> getString(R.string.status_answered)
         "no_answer"      -> getString(R.string.status_no_answer)
         "busy"           -> getString(R.string.status_busy)
@@ -350,29 +386,34 @@ class MainActivity : AppCompatActivity() {
         else             -> status.replace("_", " ")
     }
 
-    private fun exportResultsSilently() {
-        try {
+    private fun exportResultsSilently()
+    {
+        try
+        {
             val ext = prefs.getString("lastFileName", "ficheiro.xlsx")
                 ?.substringAfterLast(".", "xlsx") ?: "xlsx"
             val templateFile = File(getExternalFilesDir(null), "template.$ext")
 
-            val workbook = if (templateFile.exists()) {
+            val workbook = if (templateFile.exists())
+            {
                 val wb = WorkbookFactory.create(templateFile)
                 val sheet = wb.getSheetAt(0)
                 val headerRow = sheet.getRow(0) ?: sheet.createRow(0)
                 val existingCols = (0 until headerRow.lastCellNum).associate {
                     headerRow.getCell(it)?.stringCellValue?.trim() to it
                 }
-                fun col(name: String): Int = existingCols[name] ?: run {
+                fun col(colName: String): Int = existingCols[colName] ?: run()
+                {
                     val idx = headerRow.lastCellNum.toInt()
-                    headerRow.createCell(idx).setCellValue(name)
+                    headerRow.createCell(idx).setCellValue(colName)
                     idx
                 }
                 val statusCol   = col(getString(R.string.col_status))
                 val notesCol    = col(getString(R.string.col_notes))
                 val calledAtCol = col(getString(R.string.col_called_at))
 
-                contacts.forEachIndexed { idx, contact ->
+                contacts.forEachIndexed()
+                { idx, contact ->
                     if (contact.status == "pending" || contact.status == "dialing") return@forEachIndexed
                     val row = sheet.getRow(idx + 1) ?: sheet.createRow(idx + 1)
                     row.createCell(statusCol).setCellValue(statusLabel(contact.status))
@@ -380,7 +421,9 @@ class MainActivity : AppCompatActivity() {
                     row.createCell(calledAtCol).setCellValue(contact.calledAt)
                 }
                 wb
-            } else {
+            }
+            else
+            {
                 val wb = org.apache.poi.xssf.usermodel.XSSFWorkbook()
                 val sheet = wb.createSheet(getString(R.string.sheet_results))
                 val headerRow = sheet.createRow(0)
@@ -392,7 +435,8 @@ class MainActivity : AppCompatActivity() {
                     getString(R.string.col_called_at)
                 ).forEachIndexed { i, title -> headerRow.createCell(i).setCellValue(title) }
                 contacts.filter { it.status != "pending" && it.status != "dialing" }
-                    .forEachIndexed { rowIdx, contact ->
+                    .forEachIndexed()
+                    { rowIdx, contact ->
                         val row = sheet.createRow(rowIdx + 1)
                         row.createCell(0).setCellValue(contact.name)
                         row.createCell(1).setCellValue(contact.phone)
@@ -405,25 +449,31 @@ class MainActivity : AppCompatActivity() {
 
             FileOutputStream(resultsFile()).use { workbook.write(it) }
             workbook.close()
-        } catch (e: Exception) {
+        }
+        catch (e: Exception)
+        {
             Toast.makeText(this, getString(R.string.toast_export_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun shareResults() {
+    private fun shareResults()
+    {
         val hasProcessed = contacts.any { it.status != "pending" && it.status != "dialing" }
-        if (!hasProcessed) {
+        if (!hasProcessed)
+        {
             Toast.makeText(this, R.string.toast_no_results, Toast.LENGTH_SHORT).show()
             return
         }
         exportResultsSilently()
         val file = resultsFile()
-        if (!file.exists()) {
+        if (!file.exists())
+        {
             Toast.makeText(this, R.string.toast_results_error, Toast.LENGTH_SHORT).show()
             return
         }
         val fileUri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply()
+        {
             type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             putExtra(Intent.EXTRA_STREAM, fileUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -431,7 +481,8 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(shareIntent, getString(R.string.share_chooser_title)))
     }
 
-    private fun scheduleAutoCall(secondsLeft: Int = prefs.getInt("autoCallDelay", 5)) {
+    private fun scheduleAutoCall(secondsLeft: Int = prefs.getInt("autoCallDelay", 5))
+    {
         cancelAutoCall()
         val nextName = contacts.getOrNull(currentIndex)?.name
             ?: getString(R.string.next_contact_fallback)
@@ -441,41 +492,44 @@ class MainActivity : AppCompatActivity() {
             rootView,
             getString(R.string.snackbar_calling, nextName, secondsLeft),
             Snackbar.LENGTH_INDEFINITE
-        ).setAction(R.string.snackbar_cancel) {
+        ).setAction(R.string.snackbar_cancel)
+        {
             cancelAutoCall()
         }
         countdownSnackbar?.show()
 
-        autoCallRunnable = Runnable {
-            if (secondsLeft > 1) {
+        autoCallRunnable = Runnable()
+        {
+            if (secondsLeft > 1)
                 scheduleAutoCall(secondsLeft - 1)
-            } else {
+            else
+            {
                 countdownSnackbar?.dismiss()
                 countdownSnackbar = null
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
-                    != PackageManager.PERMISSION_GRANTED
-                ) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED)
                     callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
-                } else {
+                else
                     dialCurrent()
-                }
             }
         }
         autoCallHandler.postDelayed(autoCallRunnable!!, 1000)
     }
 
-    private fun cancelAutoCall() {
+    private fun cancelAutoCall()
+    {
         autoCallRunnable?.let { autoCallHandler.removeCallbacks(it) }
         autoCallRunnable = null
         countdownSnackbar?.dismiss()
         countdownSnackbar = null
     }
 
-    private fun refreshUI() {
+    private fun refreshUI()
+    {
         adapter.updateData(contacts, currentIndex)
 
         val remaining = contacts.size - currentIndex
-        statusText.text = when {
+        statusText.text = when
+        {
             contacts.isEmpty() -> getString(R.string.status_empty)
             remaining <= 0     -> getString(R.string.status_complete, contacts.size)
             else               -> getString(R.string.status_progress, currentIndex + 1, contacts.size, remaining)
@@ -488,19 +542,24 @@ class MainActivity : AppCompatActivity() {
         val hasResults = contacts.any { it.status != "pending" && it.status != "dialing" }
         btnShareResults.visibility = if (hasResults) android.view.View.VISIBLE else android.view.View.GONE
 
-        if (currentIndex < contacts.size) {
+        if (currentIndex < contacts.size)
+        {
             recyclerView.scrollToPosition(currentIndex)
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+    override fun onCreateOptionsMenu(menu: Menu): Boolean
+    {
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean
+    {
+        return when (item.itemId)
+        {
+            R.id.action_settings ->
+            {
                 startActivity(Intent(this, SettingsActivity::class.java))
                 true
             }
@@ -508,21 +567,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
+    override fun onDestroy()
+    {
         super.onDestroy()
         cancelAutoCall()
     }
 
-    private fun saveState() {
+    private fun saveState()
+    {
         prefs.edit()
             .putString("contacts", gson.toJson(contacts))
             .putInt("currentIndex", currentIndex)
             .apply()
     }
 
-    private fun restoreState() {
+    private fun restoreState()
+    {
         val json = prefs.getString("contacts", null)
-        if (json != null) {
+        if (json != null)
+        {
             val type = object : TypeToken<MutableList<Contact>>() {}.type
             val restored: MutableList<Contact> = gson.fromJson(json, type)
             contacts.clear()
@@ -530,7 +593,8 @@ class MainActivity : AppCompatActivity() {
             currentIndex = prefs.getInt("currentIndex", 0)
         }
 
-        adapter = ContactAdapter(contacts, currentIndex) { position ->
+        adapter = ContactAdapter(contacts, currentIndex)
+        { position ->
             currentIndex = position
             refreshUI()
         }
