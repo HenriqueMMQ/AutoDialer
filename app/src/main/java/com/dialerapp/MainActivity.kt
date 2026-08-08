@@ -1078,6 +1078,7 @@ class MainActivity : AppCompatActivity()
             .putString("contacts", gson.toJson(contacts))
             .putInt("currentIndex", currentIndex)
             .putString("dncNumbers", gson.toJson(dncNumbers.toList()))
+            .putLong("callStartTime", callStartTime)
             .apply()
     }
 
@@ -1117,6 +1118,7 @@ class MainActivity : AppCompatActivity()
             contacts.addAll(restored.sanitizeAll())
             currentIndex = prefs.getInt("currentIndex", 0)
         }
+        callStartTime = prefs.getLong("callStartTime", 0L)
 
         adapter = ContactAdapter(
             contacts, currentIndex,
