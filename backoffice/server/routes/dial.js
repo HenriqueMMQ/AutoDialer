@@ -44,7 +44,7 @@ router.get('/next', (req, res) =>
 // POST /api/dial/result — Android reports call outcome; updates the session contact list
 router.post('/result', (req, res) =>
 {
-    const { contactId, phone, status, notes, calledAt } = req.body;
+    const { contactId, phone, status, notes, calledAt, callDuration } = req.body;
     console.log(`[dial] result for contact ${contactId}: ${status}`);
 
     // Update session contacts so the backoffice sees live results
@@ -57,6 +57,7 @@ router.post('/result', (req, res) =>
         if (status)   contact.status   = status;
         if (notes !== undefined) contact.notes = notes;
         if (calledAt) contact.calledAt = calledAt;
+        if (callDuration !== undefined) contact.callDuration = callDuration;
     }
 
     res.json({ ok: true });

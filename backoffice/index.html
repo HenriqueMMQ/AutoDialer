@@ -469,6 +469,7 @@
             <th>Phone</th>
             <th>Status</th>
             <th>Called at</th>
+            <th>Duration</th>
             <th>Notes</th>
             <th style="text-align:right;padding-right:12px">Actions</th>
           </tr>
@@ -745,11 +746,12 @@ async function pollContacts()
     data.contacts.forEach(srv =>
     {
       const local = contacts.find(c => c.id === srv.id);
-      if (local && (local.status !== srv.status || local.notes !== srv.notes || local.calledAt !== srv.calledAt))
+      if (local && (local.status !== srv.status || local.notes !== srv.notes || local.calledAt !== srv.calledAt || local.callDuration !== srv.callDuration))
       {
-        local.status   = srv.status;
-        local.notes    = srv.notes;
-        local.calledAt = srv.calledAt;
+        local.status       = srv.status;
+        local.notes        = srv.notes;
+        local.calledAt     = srv.calledAt;
+        local.callDuration = srv.callDuration || '';
         updated = true;
       }
     });
@@ -858,6 +860,7 @@ function renderTable()
       <td class="td-phone">${esc(c.phone)}</td>
       <td><span class="chip chip-${c.status}">${STATUS_LABELS[c.status] || c.status}</span></td>
       <td class="td-time">${c.calledAt || '—'}</td>
+      <td class="td-time">${c.callDuration ? `<span style="color:var(--muted)">⏱</span> ${esc(c.callDuration)}` : '—'}</td>
       <td class="td-notes">${esc(c.notes) || '<span style="color:var(--muted)">—</span>'}</td>
       <td class="td-actions">
         ${c.status === 'dnc'

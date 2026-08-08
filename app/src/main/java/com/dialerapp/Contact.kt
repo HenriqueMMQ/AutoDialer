@@ -7,5 +7,6 @@ data class Contact(
     var status: String = "pending",
     var notes: String = "",
     var calledAt: String = "",
-    var source: String = ""
+    var source: String = "",
+    var callDuration: String = ""
 )

@@ -22,6 +22,7 @@ class ContactAdapter(
         val tvId: TextView = view.findViewById(R.id.tvId)
         val tvName: TextView = view.findViewById(R.id.tvName)
         val tvPhone: TextView = view.findViewById(R.id.tvPhone)
+        val tvDuration: TextView = view.findViewById(R.id.tvDuration)
         val tvStatus: TextView = view.findViewById(R.id.tvStatus)
     }
 
@@ -38,6 +39,12 @@ class ContactAdapter(
         holder.tvId.text = contact.id.toString()
         holder.tvName.text = contact.name
         holder.tvPhone.text = contact.phone
+        if (contact.callDuration.isNotEmpty()) {
+            holder.tvDuration.text = "⏱ ${contact.callDuration}"
+            holder.tvDuration.visibility = View.VISIBLE
+        } else {
+            holder.tvDuration.visibility = View.GONE
+        }
         holder.tvStatus.text = when (contact.status)
         {
             "pending"        -> holder.itemView.context.getString(R.string.status_pending)

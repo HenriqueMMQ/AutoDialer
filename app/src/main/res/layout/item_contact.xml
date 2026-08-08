@@ -38,6 +38,14 @@
             android:layout_height="wrap_content"
             android:textSize="12sp"
             android:textColor="#78909C" />
+
+        <TextView
+            android:id="@+id/tvDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:textColor="#78909C"
+            android:visibility="gone" />
     </LinearLayout>
 
     <TextView

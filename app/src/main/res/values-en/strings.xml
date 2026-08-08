@@ -59,6 +59,7 @@
     <string name="col_status">Status</string>
     <string name="col_notes">Notes</string>
     <string name="col_called_at">Called At</string>
+    <string name="col_duration">Duration</string>
     <string name="sheet_results">Results</string>
 
     <!-- Status labels (shown in the contact list and written to Excel) -->
