@@ -15,7 +15,7 @@
         android:layout_height="32dp"
         android:gravity="center"
         android:textSize="12sp"
-        android:textColor="#546E7A"
+        android:textColor="@color/color_index_text"
         android:background="@drawable/circle_index_bg"
         android:layout_marginEnd="12dp" />
 
@@ -30,7 +30,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="15sp"
-            android:textColor="#1A237E" />
+            android:textColor="@color/color_contact_name" />
 
         <TextView
             android:id="@+id/tvPhone"

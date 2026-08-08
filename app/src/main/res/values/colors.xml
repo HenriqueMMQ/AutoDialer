@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="color_primary">#1565C0</color>
+    <color name="color_primary_dark">#0D47A1</color>
+    <color name="color_secondary_green">#2E7D32</color>
+    <color name="color_background">#FAFAFA</color>
+    <color name="color_surface">#FFFFFF</color>
+    <color name="color_surface_list">#F0F4FF</color>
+    <color name="color_text_primary">#212121</color>
+    <color name="color_text_secondary">#888888</color>
+    <color name="color_contact_name">#1A237E</color>
+    <color name="color_contact_phone">#78909C</color>
+    <color name="color_index_text">#546E7A</color>
+    <color name="color_index_bg">#CFD8DC</color>
+    <color name="color_status_pill_bg">#E8EAF6</color>
+    <color name="color_highlight_row">#E3F2FD</color>
+    <color name="color_delay_value">#2E7D32</color>
+</resources>
