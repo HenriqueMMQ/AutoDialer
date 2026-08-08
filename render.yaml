@@ -1,10 +1,9 @@
 services:
   - type: web
     name: autodialer
-    runtime: node
-    rootDir: backoffice/server
-    buildCommand: npm install
-    startCommand: node index.js
+    runtime: docker
+    dockerfilePath: backoffice/server/Dockerfile
+    dockerContext: backoffice/server
     envVars:
       - key: NODE_ENV
         value: production
