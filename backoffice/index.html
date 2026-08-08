@@ -265,6 +265,17 @@
   .chip-dnc            { background: color-mix(in srgb, var(--red) 20%, transparent); color: var(--red); font-weight: 600; }
   .chip-dnc::before    { background: var(--red); }
 
+  /* ── ADD CONTACT MODAL ───────────────────────── */
+  .form-row { display: flex; flex-direction: column; gap: 4px; }
+  .form-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .form-input {
+    padding: 7px 10px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 13px; outline: none; width: 100%;
+  }
+  .form-input:focus { border-color: var(--accent); background: var(--surface); }
+  .form-input::placeholder { color: var(--muted); }
+  .modal-body-pad { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
   /* ── DNC MODAL ───────────────────────────────── */
   .modal-overlay {
     display: none; position: fixed; inset: 0;
@@ -403,6 +414,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         Sync to device
       </button>
+      <button class="btn" onclick="openAddContactModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add contact
+      </button>
       <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Import Excel
@@ -478,6 +493,33 @@
       Send to phone
     </button>
     <button class="btn" onclick="skipContact()">Skip</button>
+  </div>
+</div>
+
+<!-- ADD CONTACT MODAL -->
+<div id="add-contact-modal" class="modal-overlay" onclick="if(event.target===this)closeAddContactModal()">
+  <div class="modal-box" style="width:400px">
+    <div class="modal-header">
+      <strong>Add contact</strong>
+      <button class="btn btn-icon" onclick="closeAddContactModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body-pad">
+      <div class="form-row">
+        <label class="form-label" for="ac-name">Name</label>
+        <input class="form-input" id="ac-name" type="text" placeholder="Full name" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="ac-phone">Phone</label>
+        <input class="form-input" id="ac-phone" type="tel" placeholder="Phone number" autocomplete="off"
+               onkeydown="if(event.key==='Enter')submitAddContact()">
+      </div>
+    </div>
+    <div class="modal-footer" style="gap:8px">
+      <button class="btn" onclick="closeAddContactModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAddContact()">Add contact</button>
+    </div>
   </div>
 </div>
 
@@ -974,6 +1016,33 @@ async function syncFromDevice()
   {
     btn.disabled = false;
   }
+}
+
+// ── ADD CONTACT ───────────────────────────────
+function openAddContactModal()
+{
+  document.getElementById('ac-name').value  = '';
+  document.getElementById('ac-phone').value = '';
+  document.getElementById('add-contact-modal').classList.add('open');
+  setTimeout(() => document.getElementById('ac-name').focus(), 50);
+}
+
+function closeAddContactModal() { document.getElementById('add-contact-modal').classList.remove('open'); }
+
+function submitAddContact()
+{
+  const name  = document.getElementById('ac-name').value.trim();
+  const phone = document.getElementById('ac-phone').value.trim();
+  if (!name || !phone) { toast('Name and phone are required', 2500); return; }
+
+  const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
+  const contact = { id: newId, name, phone, status: 'pending', calledAt: '', notes: '', source: 'backoffice_manual' };
+  contacts.push(contact);
+  currentIndex = contacts.findIndex(c => c.status === 'pending');
+  closeAddContactModal();
+  refresh();
+  syncSessionToServer();
+  toast(`Added "${name}"`);
 }
 
 // ── FILTER / SORT ─────────────────────────────
