@@ -28,8 +28,14 @@ router.get('/next', (req, res) =>
 
     if (state.pendingContactsSync)
     {
-        response.pendingContacts      = state.pendingContactsSync;
-        state.pendingContactsSync     = null;
+        response.pendingContacts  = state.pendingContactsSync;
+        state.pendingContactsSync = null;
+    }
+
+    if (state.pendingDncSync)
+    {
+        response.pendingDncSync = state.pendingDncSync;
+        state.pendingDncSync    = null;
     }
 
     res.json(response);

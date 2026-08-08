@@ -5,6 +5,9 @@ const path    = require('path');
 const fs      = require('fs');
 const state   = require('../state');
 
+function norm(phone) { return String(phone).replace(/\D/g, ''); }
+function isDnc(phone) { return state.dncSet.size > 0 && state.dncSet.has(norm(phone)); }
+
 const router  = express.Router();
 const upload  = multer({ dest: path.join(__dirname, '../uploads/') });
 
@@ -24,7 +27,7 @@ router.post('/upload', upload.single('file'), (req, res) =>
         {
             const name  = row['Name']  || row['Nome']  || '';
             const phone = String(row['Phone'] || row['Telefone'] || row['Number'] || row['Número'] || '').trim();
-            return { id: i + 1, name, phone, status: 'pending', calledAt: '', notes: '', source: 'backoffice_excel' };
+            return { id: i + 1, name, phone, status: isDnc(phone) ? 'dnc' : 'pending', calledAt: '', notes: '', source: 'backoffice_excel' };
         }).filter(c => c.phone);
 
         // Queue the list so devices pick it up on their next poll
@@ -54,7 +57,7 @@ router.post('/set', (req, res) =>
 
     state.sessionContacts = contacts.map(c => ({
         id: c.id, name: c.name, phone: c.phone,
-        status: c.status || 'pending', calledAt: c.calledAt || '', notes: c.notes || '',
+        status: isDnc(c.phone) ? 'dnc' : (c.status || 'pending'), calledAt: c.calledAt || '', notes: c.notes || '',
         source: c.source || 'backoffice_manual'
     }));
     res.json({ ok: true, count: state.sessionContacts.length });

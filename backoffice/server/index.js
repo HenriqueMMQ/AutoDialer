@@ -5,6 +5,7 @@ const fs      = require('fs');
 const contactsRouter = require('./routes/contacts');
 const dialRouter     = require('./routes/dial');
 const deviceRouter   = require('./routes/device');
+const dncRouter      = require('./routes/dnc');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -22,6 +23,7 @@ app.use(express.static(uiDir));
 app.use('/api/contacts', contactsRouter);
 app.use('/api/dial',     dialRouter);
 app.use('/api/device',   deviceRouter);
+app.use('/api/dnc',      dncRouter);
 
 app.get('/api/status', (req, res) =>
 {
