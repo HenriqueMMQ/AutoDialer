@@ -349,6 +349,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         Sync from device
       </button>
+      <button class="btn" id="btn-push-device" onclick="pushToDevice()" title="Send current contact list to the Android device" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Sync to device
+      </button>
       <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Import Excel
@@ -587,7 +591,8 @@ function refresh()
   document.getElementById('stat-answered').textContent = answered;
   document.getElementById('stat-pending').textContent  = pending;
   document.getElementById('nb-contacts').textContent   = total;
-  document.getElementById('btn-clear').style.display   = total ? '' : 'none';
+  document.getElementById('btn-clear').style.display        = total ? '' : 'none';
+  document.getElementById('btn-push-device').style.display  = total ? '' : 'none';
 
   const has = total > 0;
   document.getElementById('filter-bar').style.display      = has ? '' : 'none';
@@ -701,6 +706,32 @@ function clearContacts()
   localStorage.removeItem(STORAGE_KEY);
   refresh();
   toast('Contact list cleared');
+}
+
+// ── DEVICE PUSH ───────────────────────────────
+async function pushToDevice()
+{
+  if (contacts.length === 0) return;
+  const btn = document.getElementById('btn-push-device');
+  btn.disabled = true;
+  try
+  {
+    const res = await fetch(`${API}/api/device/push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contacts: contacts.map(c => ({ id: c.id, name: c.name, phone: c.phone, status: c.status })) })
+    });
+    const data = await res.json();
+    toast(`Sent ${data.count} contacts to device — picked up on next poll`);
+  }
+  catch
+  {
+    toast('Could not reach server', 3000);
+  }
+  finally
+  {
+    btn.disabled = false;
+  }
 }
 
 // ── DEVICE SYNC ───────────────────────────────

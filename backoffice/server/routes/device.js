@@ -31,4 +31,16 @@ router.get('/contacts', (req, res) =>
     res.json({ devices });
 });
 
+// POST /api/device/push — backoffice pushes its current contact list to all devices
+router.post('/push', (req, res) =>
+{
+    const { contacts } = req.body;
+    if (!Array.isArray(contacts))
+        return res.status(400).json({ error: 'contacts must be an array' });
+
+    state.pendingContactsSync = { contacts, setAt: new Date().toISOString() };
+    console.log(`[device] push queued: ${contacts.length} contacts`);
+    res.json({ ok: true, count: contacts.length });
+});
+
 module.exports = router;
