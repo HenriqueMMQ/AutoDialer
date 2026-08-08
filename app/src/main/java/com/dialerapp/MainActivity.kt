@@ -46,6 +46,7 @@ class MainActivity : AppCompatActivity()
     private lateinit var btnLoad: Button
     private lateinit var btnDial: FloatingActionButton
     private lateinit var btnReload: Button
+    private lateinit var btnAddContact: Button
     private lateinit var btnShareResults: Button
     private lateinit var btnSettings: Button
     private lateinit var statusText: TextView
@@ -102,6 +103,7 @@ class MainActivity : AppCompatActivity()
         btnLoad = findViewById(R.id.btnLoad)
         btnDial = findViewById(R.id.btnDial)
         btnReload = findViewById(R.id.btnReload)
+        btnAddContact = findViewById(R.id.btnAddContact)
         btnShareResults = findViewById(R.id.btnShareResults)
         btnSettings = findViewById(R.id.btnSettings)
 
@@ -134,6 +136,7 @@ class MainActivity : AppCompatActivity()
             loadExcelFile(Uri.parse(uriString))
         }
 
+        btnAddContact.setOnClickListener { showAddContactDialog() }
         btnShareResults.setOnClickListener { shareResults() }
 
         btnDial.setOnClickListener()
@@ -644,6 +647,7 @@ class MainActivity : AppCompatActivity()
                     {
                         val type = object : com.google.gson.reflect.TypeToken<MutableList<Contact>>() {}.type
                         val incoming: MutableList<Contact> = gson.fromJson(arr, type)
+                        incoming.sanitizeAll()
                         pollHandler.post { applyRemoteContacts(incoming) }
                     }
                 }
@@ -799,6 +803,7 @@ class MainActivity : AppCompatActivity()
         val source = contact.source.orEmpty()
         val sourceLabel = when (source) {
             "app_excel"         -> getString(R.string.source_app_excel)
+            "app_manual"        -> getString(R.string.source_app_manual)
             "backoffice_excel"  -> getString(R.string.source_backoffice_excel)
             "backoffice_manual" -> getString(R.string.source_backoffice_manual)
             "remote_dial"       -> getString(R.string.source_remote_dial)
@@ -810,6 +815,7 @@ class MainActivity : AppCompatActivity()
             setTextColor(0xFFFFFFFF.toInt())
             setBackgroundColor(when (source) {
                 "app_excel"         -> 0xFF1565C0.toInt()
+                "app_manual"        -> 0xFF00838F.toInt()
                 "backoffice_excel"  -> 0xFF2E7D32.toInt()
                 "backoffice_manual" -> 0xFF6A1B9A.toInt()
                 "remote_dial"       -> 0xFFE65100.toInt()
@@ -850,6 +856,55 @@ class MainActivity : AppCompatActivity()
             .show()
     }
 
+    private fun showAddContactDialog()
+    {
+        val dp = resources.displayMetrics.density
+        val pad = (20 * dp).toInt()
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad * 2, pad, pad * 2, 0)
+        }
+
+        val nameInput = EditText(this).apply {
+            hint = getString(R.string.dialog_hint_name)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            textSize = 15f
+        }
+        val phoneInput = EditText(this).apply {
+            hint = getString(R.string.dialog_hint_phone)
+            inputType = InputType.TYPE_CLASS_PHONE
+            textSize = 15f
+        }
+        container.addView(nameInput)
+        container.addView(phoneInput)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.dialog_title_add_contact)
+            .setView(container)
+            .setPositiveButton(R.string.dialog_save) { _, _ ->
+                val name  = nameInput.text.toString().trim()
+                val phone = phoneInput.text.toString().trim()
+                if (name.isEmpty() || phone.isEmpty()) {
+                    Toast.makeText(this, R.string.toast_contact_invalid, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                val newContact = Contact(
+                    id = (contacts.maxOfOrNull { it.id } ?: 0) + 1,
+                    name = name,
+                    phone = phone,
+                    status = "pending",
+                    source = "app_manual"
+                )
+                contacts.add(newContact)
+                saveState()
+                refreshUI()
+                Toast.makeText(this, R.string.toast_contact_added, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun saveState()
     {
         prefs.edit()
@@ -857,6 +912,16 @@ class MainActivity : AppCompatActivity()
             .putInt("currentIndex", currentIndex)
             .apply()
     }
+
+    // Gson bypasses Kotlin constructors, so fields added after old JSON was saved can be null
+    // even though the data class declares them non-null with defaults.
+    private fun Contact.sanitize() = this.apply {
+        if (notes    == null) notes    = ""
+        if (calledAt == null) calledAt = ""
+        if (source   == null) source   = ""
+    }
+
+    private fun MutableList<Contact>.sanitizeAll() = onEach { it.sanitize() }
 
     private fun restoreState()
     {
@@ -866,7 +931,7 @@ class MainActivity : AppCompatActivity()
             val type = object : TypeToken<MutableList<Contact>>() {}.type
             val restored: MutableList<Contact> = gson.fromJson(json, type)
             contacts.clear()
-            contacts.addAll(restored)
+            contacts.addAll(restored.sanitizeAll())
             currentIndex = prefs.getInt("currentIndex", 0)
         }
 

@@ -90,10 +90,17 @@
     <string name="source_backoffice_excel">🖥️ Excel carregado no backoffice</string>
     <string name="source_backoffice_manual">✏️ Adicionado manualmente no backoffice</string>
     <string name="source_remote_dial">📞 Criado por chamada remota</string>
+    <string name="source_app_manual">➕ Adicionado manualmente no dispositivo</string>
     <string name="source_unknown">Origem desconhecida</string>
 
     <!-- Remote dial -->
     <string name="toast_remote_dial">Backoffice: a ligar para %1$s</string>
     <string name="toast_remote_not_found">Contacto não encontrado na lista local: %1$s (%2$s)</string>
     <string name="toast_contacts_synced">Lista sincronizada: %1$d contactos recebidos</string>
+    <string name="btn_add_contact">Adicionar Contacto</string>
+    <string name="dialog_title_add_contact">Novo Contacto</string>
+    <string name="dialog_hint_name">Nome</string>
+    <string name="dialog_hint_phone">Telefone</string>
+    <string name="toast_contact_added">Contacto adicionado</string>
+    <string name="toast_contact_invalid">Nome e telefone são obrigatórios</string>
 </resources>

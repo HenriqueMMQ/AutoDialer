@@ -107,6 +107,14 @@
                 </LinearLayout>
 
                 <Button
+                    android:id="@+id/btnAddContact"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="@string/btn_add_contact"
+                    android:backgroundTint="#546E7A"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
                     android:id="@+id/btnShareResults"
                     android:layout_width="match_parent"
                     android:layout_height="44dp"
