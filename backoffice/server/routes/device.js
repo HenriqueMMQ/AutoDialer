@@ -38,7 +38,10 @@ router.post('/push', (req, res) =>
     if (!Array.isArray(contacts))
         return res.status(400).json({ error: 'contacts must be an array' });
 
-    state.pendingContactsSync = { contacts, setAt: new Date().toISOString() };
+    state.pendingContactsSync = {
+        contacts: contacts.map(c => ({ ...c, source: c.source || 'backoffice_manual' })),
+        setAt: new Date().toISOString()
+    };
     console.log(`[device] push queued: ${contacts.length} contacts`);
     res.json({ ok: true, count: contacts.length });
 });
