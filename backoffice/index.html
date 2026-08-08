@@ -445,6 +445,26 @@ let currentFilter = 'all';
 let currentSearch = '';
 let currentIndex  = 0;
 
+const STORAGE_KEY = 'autodialer_session';
+
+function saveSession()
+{
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ contacts, currentIndex })); }
+  catch { /* storage full or unavailable */ }
+}
+
+function loadSession()
+{
+  try
+  {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const { contacts: c, currentIndex: i } = JSON.parse(raw);
+    if (Array.isArray(c) && c.length > 0) { contacts = c; currentIndex = i ?? 0; }
+  }
+  catch { /* corrupted data, ignore */ }
+}
+
 const STATUS_LABELS = {
   pending:'Pending', dialing:'Dialing', answered:'Answered',
   no_answer:'No answer', busy:'Busy', callback_later:'Callback',
@@ -558,6 +578,7 @@ function loadSampleData(e)
 // ── RENDER ────────────────────────────────────
 function refresh()
 {
+  saveSession();
   const total    = contacts.length;
   const answered = contacts.filter(c => c.status === 'answered').length;
   const pending  = contacts.filter(c => c.status === 'pending').length;
@@ -677,6 +698,7 @@ function clearContacts()
   document.getElementById('search-input').value = '';
   currentFilter = 'all';
   document.querySelectorAll('.pill').forEach((p, i) => p.classList.toggle('active', i === 0));
+  localStorage.removeItem(STORAGE_KEY);
   refresh();
   toast('Contact list cleared');
 }
@@ -759,6 +781,7 @@ function toast(msg, duration = 2500)
 
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+loadSession();
 refresh();
 </script>
 </body>
