@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">AutoDialer</string>
+
+    <!-- Main screen -->
+    <string name="header_title">Call Queue</string>
+    <string name="status_empty">Share an Excel file to this app to get started</string>
+    <string name="status_complete">Queue complete! %1$d contacts processed.</string>
+    <string name="status_progress">Contact %1$d of %2$d  •  %3$d remaining</string>
+    <string name="btn_load">Load Excel</string>
+    <string name="btn_reload">Reload: %1$s</string>
+    <string name="btn_share_results">Share Results</string>
+    <string name="btn_settings">⚙</string>
+    <string name="check_auto_call">Auto-call next after disposition</string>
+    <string name="fab_dial_description">Dial Next</string>
+
+    <!-- Toast messages -->
+    <string name="toast_queue_complete">Queue complete!</string>
+    <string name="toast_loaded">%1$d contacts loaded</string>
+    <string name="toast_error">Error: %1$s</string>
+    <string name="toast_permission_required">Phone permission required to auto-dial</string>
+    <string name="toast_no_results">No results to share yet</string>
+    <string name="toast_results_error">Could not create results file</string>
+    <string name="toast_export_error">Could not save results: %1$s</string>
+
+    <!-- File loading errors -->
+    <string name="error_cannot_open">Cannot open file</string>
+    <string name="error_empty_sheet">Empty sheet</string>
+    <string name="error_no_phone_column">Phone column not found. Use a header named \'Phone\', \'Number\', \'Telefone\' or \'Número\'</string>
+
+    <!-- Contact name fallback -->
+    <string name="unknown_contact">Unknown</string>
+    <string name="next_contact_fallback">next contact</string>
+    <string name="file_fallback_name">shared_file</string>
+
+    <!-- Disposition dialog -->
+    <string name="dialog_title_call_result">Call Result</string>
+    <string name="dialog_option_answered">Answered</string>
+    <string name="dialog_option_no_answer">No Answer</string>
+    <string name="dialog_option_busy">Busy</string>
+    <string name="dialog_option_callback">Callback Later</string>
+    <string name="dialog_option_not_interested">Not Interested</string>
+    <string name="dialog_option_wrong_number">Wrong Number</string>
+    <string name="dialog_notes_label">Notes (optional)</string>
+    <string name="dialog_notes_hint">Write notes here…</string>
+    <string name="dialog_save">Save</string>
+
+    <!-- Auto-call snackbar -->
+    <string name="snackbar_calling">Calling %1$s in %2$ds…</string>
+    <string name="snackbar_cancel">Cancel</string>
+
+    <!-- Share sheet title -->
+    <string name="share_chooser_title">Share results via…</string>
+
+    <!-- Export column headers (written into the Excel file) -->
+    <string name="col_name">Name</string>
+    <string name="col_phone">Phone</string>
+    <string name="col_status">Status</string>
+    <string name="col_notes">Notes</string>
+    <string name="col_called_at">Called At</string>
+    <string name="sheet_results">Results</string>
+
+    <!-- Status labels (shown in the contact list and written to Excel) -->
+    <string name="status_pending">Pending</string>
+    <string name="status_dialing">Dialing</string>
+    <string name="status_dialed">Dialed</string>
+    <string name="status_answered">Answered</string>
+    <string name="status_no_answer">No Answer</string>
+    <string name="status_busy">Busy</string>
+    <string name="status_callback_later">Callback Later</string>
+    <string name="status_not_interested">Not Interested</string>
+    <string name="status_wrong_number">Wrong Number</string>
+
+    <!-- Settings screen -->
+    <string name="settings_back">← Back</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_autocall">AUTO-CALL</string>
+    <string name="settings_delay_title">Delay before next call</string>
+    <string name="settings_delay_description">How long to wait after selecting a call outcome before automatically dialling the next contact.</string>
+    <string name="settings_delay_seconds">%1$ds</string>
+</resources>

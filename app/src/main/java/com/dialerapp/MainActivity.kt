@@ -32,7 +32,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.apache.poi.ss.usermodel.WorkbookFactory
-import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -65,7 +64,7 @@ class MainActivity : AppCompatActivity() {
     ) { uri ->
         uri?.let {
             contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            val fileName = it.lastPathSegment?.substringAfterLast("/") ?: "file"
+            val fileName = it.lastPathSegment?.substringAfterLast("/") ?: getString(R.string.file_fallback_name)
             prefs.edit()
                 .putString("lastFileUri", it.toString())
                 .putString("lastFileName", fileName)
@@ -78,7 +77,8 @@ class MainActivity : AppCompatActivity() {
     private val callPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) dialCurrent() else Toast.makeText(this, "Phone permission required to auto-dial", Toast.LENGTH_LONG).show()
+        if (granted) dialCurrent()
+        else Toast.makeText(this, R.string.toast_permission_required, Toast.LENGTH_LONG).show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -122,7 +122,7 @@ class MainActivity : AppCompatActivity() {
 
         btnDial.setOnClickListener {
             if (currentIndex >= contacts.size) {
-                Toast.makeText(this, "Queue complete!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.toast_queue_complete, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
@@ -136,7 +136,6 @@ class MainActivity : AppCompatActivity() {
 
         restoreState()
 
-        // Handle file shared/opened before the activity was created
         if (savedInstanceState == null) {
             handleIncomingIntent(intent)
         }
@@ -163,44 +162,53 @@ class MainActivity : AppCompatActivity() {
             else -> null
         }
         if (uri != null) {
-            val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: "shared_file"
+            val fileName = uri.lastPathSegment?.substringAfterLast("/")
+                ?: getString(R.string.file_fallback_name)
             prefs.edit()
                 .putString("lastFileUri", uri.toString())
                 .putString("lastFileName", fileName)
                 .apply()
             updateReloadButton(fileName)
             loadExcelFile(uri)
-            // Clear the action so rotating the screen doesn't re-load
             intent.action = null
         }
     }
 
     private fun updateReloadButton(fileName: String) {
-        btnReload.text = "Reload: $fileName"
+        btnReload.text = getString(R.string.btn_reload, fileName)
         btnReload.visibility = android.view.View.VISIBLE
     }
 
     private fun loadExcelFile(uri: Uri) {
         try {
             val inputStream = contentResolver.openInputStream(uri)
-                ?: throw Exception("Cannot open file")
+                ?: throw Exception(getString(R.string.error_cannot_open))
 
-            val workbook = WorkbookFactory.create(inputStream)
+            val ext = prefs.getString("lastFileName", "ficheiro.xlsx")
+                ?.substringAfterLast(".", "xlsx") ?: "xlsx"
+            val templateFile = File(getExternalFilesDir(null), "template.$ext")
+            FileOutputStream(templateFile).use { inputStream.copyTo(it) }
+            inputStream.close()
+
+            val workbook = WorkbookFactory.create(templateFile)
             val sheet = workbook.getSheetAt(0)
             val newContacts = mutableListOf<Contact>()
 
-            val headerRow = sheet.getRow(0) ?: throw Exception("Empty sheet")
+            val headerRow = sheet.getRow(0) ?: throw Exception(getString(R.string.error_empty_sheet))
             var nameCol = -1
             var phoneCol = -1
             for (c in 0 until headerRow.lastCellNum) {
                 val header = headerRow.getCell(c)?.stringCellValue?.trim() ?: ""
                 when {
-                    header.equals("Name", ignoreCase = true) -> nameCol = c
+                    header.equals("Name", ignoreCase = true) ||
+                    header.equals("Nome", ignoreCase = true) -> nameCol = c
                     header.contains("Phone", ignoreCase = true) ||
-                    header.contains("Number", ignoreCase = true) -> phoneCol = c
+                    header.contains("Number", ignoreCase = true) ||
+                    header.contains("Telefone", ignoreCase = true) ||
+                    header.contains("Número", ignoreCase = true) -> phoneCol = c
                 }
             }
-            if (phoneCol == -1) throw Exception("No 'Phone' or 'Number' column found in the header row")
+            if (phoneCol == -1) throw Exception(getString(R.string.error_no_phone_column))
 
             for (i in 1..sheet.lastRowNum) {
                 val row = sheet.getRow(i) ?: continue
@@ -213,8 +221,9 @@ class MainActivity : AppCompatActivity() {
                 if (phone.isBlank()) continue
 
                 val name = if (nameCol >= 0) {
-                    row.getCell(nameCol)?.stringCellValue?.trim() ?: "Unknown"
-                } else "Unknown"
+                    row.getCell(nameCol)?.stringCellValue?.trim()
+                        ?: getString(R.string.unknown_contact)
+                } else getString(R.string.unknown_contact)
 
                 newContacts.add(Contact(
                     id = newContacts.size + 1,
@@ -224,7 +233,6 @@ class MainActivity : AppCompatActivity() {
                 ))
             }
             workbook.close()
-            inputStream.close()
 
             contacts.clear()
             contacts.addAll(newContacts)
@@ -232,10 +240,10 @@ class MainActivity : AppCompatActivity() {
             saveState()
             refreshUI()
 
-            Toast.makeText(this, "Loaded ${contacts.size} contacts", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_loaded, contacts.size), Toast.LENGTH_SHORT).show()
 
         } catch (e: Exception) {
-            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -258,7 +266,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showDispositionDialog() {
-        val options = arrayOf("Answered", "No Answer", "Busy", "Callback Later", "Not Interested", "Wrong Number")
+        val options = arrayOf(
+            getString(R.string.dialog_option_answered),
+            getString(R.string.dialog_option_no_answer),
+            getString(R.string.dialog_option_busy),
+            getString(R.string.dialog_option_callback),
+            getString(R.string.dialog_option_not_interested),
+            getString(R.string.dialog_option_wrong_number)
+        )
+        val statusKeys = arrayOf(
+            "answered", "no_answer", "busy", "callback_later", "not_interested", "wrong_number"
+        )
         val padding = (20 * resources.displayMetrics.density).toInt()
 
         val container = LinearLayout(this).apply {
@@ -266,9 +284,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(padding * 2, padding, padding * 2, 0)
         }
 
-        val radioGroup = RadioGroup(this).apply {
-            orientation = RadioGroup.VERTICAL
-        }
+        val radioGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
         options.forEach { option ->
             radioGroup.addView(RadioButton(this).apply {
                 text = option
@@ -279,14 +295,14 @@ class MainActivity : AppCompatActivity() {
         container.addView(radioGroup)
 
         container.addView(TextView(this).apply {
-            text = "Notes (optional)"
+            text = getString(R.string.dialog_notes_label)
             textSize = 13f
             setTextColor(0xFF666666.toInt())
             setPadding(0, padding, 0, 4)
         })
 
         val notesInput = EditText(this).apply {
-            hint = "Write notes here..."
+            hint = getString(R.string.dialog_notes_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             minLines = 2
             maxLines = 4
@@ -294,14 +310,14 @@ class MainActivity : AppCompatActivity() {
         container.addView(notesInput)
 
         AlertDialog.Builder(this)
-            .setTitle("Call Result")
+            .setTitle(R.string.dialog_title_call_result)
             .setView(container)
-            .setPositiveButton("Save") { _, _ ->
+            .setPositiveButton(R.string.dialog_save) { _, _ ->
                 if (currentIndex < contacts.size) {
                     val selectedId = radioGroup.checkedRadioButtonId
                     val selectedIndex = radioGroup.indexOfChild(radioGroup.findViewById(selectedId))
                     val contact = contacts[currentIndex]
-                    contact.status = options[selectedIndex].lowercase().replace(" ", "_")
+                    contact.status = statusKeys[selectedIndex]
                     contact.notes = notesInput.text.toString().trim()
                     contact.calledAt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
                     currentIndex++
@@ -318,43 +334,92 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resultsFile(): File {
-        val originalName = prefs.getString("lastFileName", "contacts") ?: "contacts"
-        val resultsName = originalName.substringBeforeLast(".") + "_results.xlsx"
+        val originalName = prefs.getString("lastFileName", "contactos") ?: "contactos"
+        val resultsName = originalName.substringBeforeLast(".") + "_resultados.xlsx"
         return File(getExternalFilesDir(null), resultsName)
+    }
+
+    private fun statusLabel(status: String): String = when (status) {
+        "answered"       -> getString(R.string.status_answered)
+        "no_answer"      -> getString(R.string.status_no_answer)
+        "busy"           -> getString(R.string.status_busy)
+        "callback_later" -> getString(R.string.status_callback_later)
+        "not_interested" -> getString(R.string.status_not_interested)
+        "wrong_number"   -> getString(R.string.status_wrong_number)
+        "dialed"         -> getString(R.string.status_dialed)
+        else             -> status.replace("_", " ")
     }
 
     private fun exportResultsSilently() {
         try {
-            val workbook = XSSFWorkbook()
-            val sheet = workbook.createSheet("Results")
+            val ext = prefs.getString("lastFileName", "ficheiro.xlsx")
+                ?.substringAfterLast(".", "xlsx") ?: "xlsx"
+            val templateFile = File(getExternalFilesDir(null), "template.$ext")
 
-            val headerRow = sheet.createRow(0)
-            listOf("Name", "Phone", "Status", "Notes", "Called At").forEachIndexed { i, title ->
-                headerRow.createCell(i).setCellValue(title)
+            val workbook = if (templateFile.exists()) {
+                val wb = WorkbookFactory.create(templateFile)
+                val sheet = wb.getSheetAt(0)
+                val headerRow = sheet.getRow(0) ?: sheet.createRow(0)
+                val existingCols = (0 until headerRow.lastCellNum).associate {
+                    headerRow.getCell(it)?.stringCellValue?.trim() to it
+                }
+                fun col(name: String): Int = existingCols[name] ?: run {
+                    val idx = headerRow.lastCellNum.toInt()
+                    headerRow.createCell(idx).setCellValue(name)
+                    idx
+                }
+                val statusCol   = col(getString(R.string.col_status))
+                val notesCol    = col(getString(R.string.col_notes))
+                val calledAtCol = col(getString(R.string.col_called_at))
+
+                contacts.forEachIndexed { idx, contact ->
+                    if (contact.status == "pending" || contact.status == "dialing") return@forEachIndexed
+                    val row = sheet.getRow(idx + 1) ?: sheet.createRow(idx + 1)
+                    row.createCell(statusCol).setCellValue(statusLabel(contact.status))
+                    row.createCell(notesCol).setCellValue(contact.notes)
+                    row.createCell(calledAtCol).setCellValue(contact.calledAt)
+                }
+                wb
+            } else {
+                val wb = org.apache.poi.xssf.usermodel.XSSFWorkbook()
+                val sheet = wb.createSheet(getString(R.string.sheet_results))
+                val headerRow = sheet.createRow(0)
+                listOf(
+                    getString(R.string.col_name),
+                    getString(R.string.col_phone),
+                    getString(R.string.col_status),
+                    getString(R.string.col_notes),
+                    getString(R.string.col_called_at)
+                ).forEachIndexed { i, title -> headerRow.createCell(i).setCellValue(title) }
+                contacts.filter { it.status != "pending" && it.status != "dialing" }
+                    .forEachIndexed { rowIdx, contact ->
+                        val row = sheet.createRow(rowIdx + 1)
+                        row.createCell(0).setCellValue(contact.name)
+                        row.createCell(1).setCellValue(contact.phone)
+                        row.createCell(2).setCellValue(statusLabel(contact.status))
+                        row.createCell(3).setCellValue(contact.notes)
+                        row.createCell(4).setCellValue(contact.calledAt)
+                    }
+                wb
             }
 
-            contacts.filter { it.status != "pending" && it.status != "dialing" }
-                .forEachIndexed { rowIdx, contact ->
-                    val row = sheet.createRow(rowIdx + 1)
-                    row.createCell(0).setCellValue(contact.name)
-                    row.createCell(1).setCellValue(contact.phone)
-                    row.createCell(2).setCellValue(contact.status.replace("_", " "))
-                    row.createCell(3).setCellValue(contact.notes)
-                    row.createCell(4).setCellValue(contact.calledAt)
-                }
-
-            for (i in 0..4) sheet.autoSizeColumn(i)
             FileOutputStream(resultsFile()).use { workbook.write(it) }
             workbook.close()
         } catch (e: Exception) {
-            Toast.makeText(this, "Could not save results: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_export_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
     private fun shareResults() {
+        val hasProcessed = contacts.any { it.status != "pending" && it.status != "dialing" }
+        if (!hasProcessed) {
+            Toast.makeText(this, R.string.toast_no_results, Toast.LENGTH_SHORT).show()
+            return
+        }
+        exportResultsSilently()
         val file = resultsFile()
         if (!file.exists()) {
-            Toast.makeText(this, "No results to share yet", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_results_error, Toast.LENGTH_SHORT).show()
             return
         }
         val fileUri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
@@ -363,19 +428,20 @@ class MainActivity : AppCompatActivity() {
             putExtra(Intent.EXTRA_STREAM, fileUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        startActivity(Intent.createChooser(shareIntent, "Share results via…"))
+        startActivity(Intent.createChooser(shareIntent, getString(R.string.share_chooser_title)))
     }
 
     private fun scheduleAutoCall(secondsLeft: Int = prefs.getInt("autoCallDelay", 5)) {
         cancelAutoCall()
-        val nextName = contacts.getOrNull(currentIndex)?.name ?: "next contact"
+        val nextName = contacts.getOrNull(currentIndex)?.name
+            ?: getString(R.string.next_contact_fallback)
         val rootView = findViewById<android.view.View>(android.R.id.content)
 
         countdownSnackbar = Snackbar.make(
             rootView,
-            "Calling $nextName in ${secondsLeft}s…",
+            getString(R.string.snackbar_calling, nextName, secondsLeft),
             Snackbar.LENGTH_INDEFINITE
-        ).setAction("Cancel") {
+        ).setAction(R.string.snackbar_cancel) {
             cancelAutoCall()
         }
         countdownSnackbar?.show()
@@ -409,12 +475,10 @@ class MainActivity : AppCompatActivity() {
         adapter.updateData(contacts, currentIndex)
 
         val remaining = contacts.size - currentIndex
-        statusText.text = if (contacts.isEmpty()) {
-            "Share an Excel file to this app to start"
-        } else if (remaining <= 0) {
-            "Queue complete! ${contacts.size} contacts processed."
-        } else {
-            "Contact ${currentIndex + 1} of ${contacts.size}  •  $remaining remaining"
+        statusText.text = when {
+            contacts.isEmpty() -> getString(R.string.status_empty)
+            remaining <= 0     -> getString(R.string.status_complete, contacts.size)
+            else               -> getString(R.string.status_progress, currentIndex + 1, contacts.size, remaining)
         }
 
         val dialEnabled = contacts.isNotEmpty() && currentIndex < contacts.size

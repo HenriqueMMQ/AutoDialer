@@ -20,11 +20,11 @@ class SettingsActivity : AppCompatActivity() {
 
         val savedDelay = prefs.getInt("autoCallDelay", 5)
         seekDelay.progress = savedDelay
-        txtDelayValue.text = "${savedDelay}s"
+        txtDelayValue.text = getString(R.string.settings_delay_seconds, savedDelay)
 
         seekDelay.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                txtDelayValue.text = "${progress}s"
+                txtDelayValue.text = getString(R.string.settings_delay_seconds, progress)
                 prefs.edit().putInt("autoCallDelay", progress).apply()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar) {}

@@ -32,7 +32,18 @@ class ContactAdapter(
         holder.tvId.text = contact.id.toString()
         holder.tvName.text = contact.name
         holder.tvPhone.text = contact.phone
-        holder.tvStatus.text = contact.status.replace("_", " ")
+        holder.tvStatus.text = when (contact.status) {
+            "pending"        -> holder.itemView.context.getString(R.string.status_pending)
+            "dialing"        -> holder.itemView.context.getString(R.string.status_dialing)
+            "dialed"         -> holder.itemView.context.getString(R.string.status_dialed)
+            "answered"       -> holder.itemView.context.getString(R.string.status_answered)
+            "no_answer"      -> holder.itemView.context.getString(R.string.status_no_answer)
+            "busy"           -> holder.itemView.context.getString(R.string.status_busy)
+            "callback_later" -> holder.itemView.context.getString(R.string.status_callback_later)
+            "not_interested" -> holder.itemView.context.getString(R.string.status_not_interested)
+            "wrong_number"   -> holder.itemView.context.getString(R.string.status_wrong_number)
+            else             -> contact.status.replace("_", " ")
+        }
 
         // Highlight current row
         if (position == currentIndex) {

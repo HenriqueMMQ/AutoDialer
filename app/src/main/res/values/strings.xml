@@ -1,4 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Call Queue</string>
+    <!-- App -->
+    <string name="app_name">AutoDialer</string>
+
+    <!-- Main screen -->
+    <string name="header_title">Fila de Chamadas</string>
+    <string name="status_empty">Partilhe um ficheiro Excel com esta app para começar</string>
+    <string name="status_complete">Fila completa! %1$d contactos processados.</string>
+    <string name="status_progress">Contacto %1$d de %2$d  •  %3$d restantes</string>
+    <string name="btn_load">Carregar Excel</string>
+    <string name="btn_reload">Recarregar: %1$s</string>
+    <string name="btn_share_results">Partilhar Resultados</string>
+    <string name="btn_settings">⚙</string>
+    <string name="check_auto_call">Ligar automaticamente ao próximo após resultado</string>
+    <string name="fab_dial_description">Ligar ao Próximo</string>
+
+    <!-- Toast messages -->
+    <string name="toast_queue_complete">Fila completa!</string>
+    <string name="toast_loaded">%1$d contactos carregados</string>
+    <string name="toast_error">Erro: %1$s</string>
+    <string name="toast_permission_required">Permissão de chamada necessária para marcar automaticamente</string>
+    <string name="toast_no_results">Ainda não há resultados para partilhar</string>
+    <string name="toast_results_error">Não foi possível criar o ficheiro de resultados</string>
+    <string name="toast_export_error">Não foi possível guardar os resultados: %1$s</string>
+
+    <!-- File loading errors -->
+    <string name="error_cannot_open">Não foi possível abrir o ficheiro</string>
+    <string name="error_empty_sheet">Folha vazia</string>
+    <string name="error_no_phone_column">Coluna de telefone não encontrada. Use um cabeçalho \'Phone\', \'Number\', \'Telefone\' ou \'Número\'</string>
+
+    <!-- Contact name fallback -->
+    <string name="unknown_contact">Desconhecido</string>
+    <string name="next_contact_fallback">próximo contacto</string>
+    <string name="file_fallback_name">ficheiro_partilhado</string>
+
+    <!-- Disposition dialog -->
+    <string name="dialog_title_call_result">Resultado da Chamada</string>
+    <string name="dialog_option_answered">Atendeu</string>
+    <string name="dialog_option_no_answer">Não Atendeu</string>
+    <string name="dialog_option_busy">Ocupado</string>
+    <string name="dialog_option_callback">Ligar Mais Tarde</string>
+    <string name="dialog_option_not_interested">Não Interessado</string>
+    <string name="dialog_option_wrong_number">Número Errado</string>
+    <string name="dialog_notes_label">Notas (opcional)</string>
+    <string name="dialog_notes_hint">Escrever notas aqui…</string>
+    <string name="dialog_save">Guardar</string>
+
+    <!-- Auto-call snackbar -->
+    <string name="snackbar_calling">A ligar a %1$s em %2$ds…</string>
+    <string name="snackbar_cancel">Cancelar</string>
+
+    <!-- Share sheet title -->
+    <string name="share_chooser_title">Partilhar resultados via…</string>
+
+    <!-- Export column headers (written into the Excel file) -->
+    <string name="col_name">Nome</string>
+    <string name="col_phone">Telefone</string>
+    <string name="col_status">Estado</string>
+    <string name="col_notes">Notas</string>
+    <string name="col_called_at">Chamado Em</string>
+    <string name="sheet_results">Resultados</string>
+
+    <!-- Status labels (shown in the contact list and written to Excel) -->
+    <string name="status_pending">Pendente</string>
+    <string name="status_dialing">A Marcar</string>
+    <string name="status_dialed">Marcado</string>
+    <string name="status_answered">Atendeu</string>
+    <string name="status_no_answer">Não Atendeu</string>
+    <string name="status_busy">Ocupado</string>
+    <string name="status_callback_later">Ligar Mais Tarde</string>
+    <string name="status_not_interested">Não Interessado</string>
+    <string name="status_wrong_number">Número Errado</string>
+
+    <!-- Settings screen -->
+    <string name="settings_back">← Voltar</string>
+    <string name="settings_title">Definições</string>
+    <string name="settings_section_autocall">CHAMADAS AUTOMÁTICAS</string>
+    <string name="settings_delay_title">Delay antes da próxima chamada</string>
+    <string name="settings_delay_description">Quanto tempo aguardar após selecionar um resultado antes de marcar automaticamente o próximo contacto.</string>
+    <string name="settings_delay_seconds">%1$ds</string>
 </resources>
