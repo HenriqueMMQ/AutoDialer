@@ -48,6 +48,19 @@
             android:visibility="gone" />
     </LinearLayout>
 
+    <ImageButton
+        android:id="@+id/btnHistory"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_history"
+        android:imageAlpha="180"
+        android:scaleType="fitCenter"
+        android:padding="4dp"
+        android:layout_marginEnd="4dp"
+        android:visibility="gone"
+        android:contentDescription="Call history" />
+
     <TextView
         android:id="@+id/tvStatus"
         android:layout_width="wrap_content"

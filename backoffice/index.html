@@ -539,6 +539,21 @@
   </div>
 </div>
 
+<div id="history-modal" class="modal-overlay" onclick="if(event.target===this)closeHistoryModal()">
+  <div class="modal-box" style="width:480px;max-height:80vh">
+    <div class="modal-header">
+      <strong id="history-modal-title">—</strong>
+      <button class="btn btn-icon" onclick="closeHistoryModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="history-modal-body" style="padding:16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeHistoryModal()" data-i18n="btn.close">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" style="
   position:fixed;bottom:24px;right:24px;
   background:var(--surface);border:1px solid var(--border);
@@ -646,6 +661,10 @@ const TRANSLATIONS = {
     'toast.removedFromDnc':    'Removido da lista Não Ligar',
     'confirm.clearList':       'A lista atual será apagada permanentemente e não poderá ser recuperada.\n\nExporta o Excel primeiro para não perder os dados.\n\nTens a certeza que queres continuar?',
     'confirm.replaceList':     'A lista atual será substituída permanentemente.\n\nExporta o Excel primeiro para não perder os dados.\n\nTens a certeza que queres continuar?',
+    'modal.historyTitle':      'Histórico de Chamadas',
+    'history.call':            'Chamada',
+    'history.empty':           'Sem histórico de chamadas.',
+    'title.callHistory':       'Ver histórico de chamadas',
   },
   en: {
     'nav.workspace':           'Workspace',
@@ -732,6 +751,10 @@ const TRANSLATIONS = {
     'toast.removedFromDnc':    'Removed from DNC list',
     'confirm.clearList':       'The current list will be permanently deleted and cannot be recovered.\n\nExport the Excel first to avoid losing data.\n\nAre you sure you want to continue?',
     'confirm.replaceList':     'The current list will be permanently replaced.\n\nExport the Excel first to avoid losing data.\n\nAre you sure you want to continue?',
+    'modal.historyTitle':      'Call History',
+    'history.call':            'Call',
+    'history.empty':           'No call history.',
+    'title.callHistory':       'View call history',
   }
 };
 
@@ -838,6 +861,48 @@ function updateDncBadge()
 
 function openDncModal()  { document.getElementById('dnc-modal').classList.add('open'); renderDncList(); }
 function closeDncModal() { document.getElementById('dnc-modal').classList.remove('open'); }
+
+function showCallHistoryModal(idx)
+{
+  const c = contacts[idx];
+  if (!c || !Array.isArray(c.callHistory) || c.callHistory.length === 0) return;
+
+  const statusLabels = {
+    pending:        tr('status.pending'),
+    dialing:        tr('status.dialing'),
+    answered:       tr('status.answered'),
+    no_answer:      tr('status.no_answer'),
+    busy:           tr('status.busy'),
+    callback_later: tr('status.callback_later'),
+    not_interested: tr('status.not_interested'),
+    wrong_number:   tr('status.wrong_number'),
+    dialed:         tr('status.dialed'),
+    dnc:            tr('status.dnc'),
+  };
+
+  document.getElementById('history-modal-title').textContent =
+    `${esc(c.name)} — ${tr('modal.historyTitle')}`;
+
+  const body = document.getElementById('history-modal-body');
+  body.innerHTML = [...c.callHistory].reverse().map((rec, i) => {
+    const num = c.callHistory.length - i;
+    const statusLabel = statusLabels[rec.status] || rec.status;
+    return `
+      <div style="background:var(--surface-2);border-radius:8px;padding:12px;border:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-weight:600;font-size:13px">${tr('history.call')} #${num}</span>
+          <span class="chip chip-${rec.status}" style="font-size:10px">${statusLabel}</span>
+          <span style="margin-left:auto;font-size:12px;color:var(--muted)">${esc(rec.calledAt) || '—'}</span>
+        </div>
+        ${rec.callDuration ? `<div style="font-size:12px;color:var(--muted)">⏱ ${esc(rec.callDuration)}</div>` : ''}
+        ${rec.notes ? `<div style="font-size:13px;margin-top:4px;color:var(--text)">${esc(rec.notes)}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  document.getElementById('history-modal').classList.add('open');
+}
+
+function closeHistoryModal() { document.getElementById('history-modal').classList.remove('open'); }
 
 function renderDncList()
 {
@@ -1084,6 +1149,11 @@ function renderTable()
       <td class="td-time">${c.callDuration ? `<span style="color:var(--muted)">⏱</span> ${esc(c.callDuration)}` : '—'}</td>
       <td class="td-notes">${esc(c.notes) || '<span style="color:var(--muted)">—</span>'}</td>
       <td class="td-actions">
+        ${Array.isArray(c.callHistory) && c.callHistory.length > 1
+          ? `<button class="btn btn-icon" title="${tr('title.callHistory')}" onclick="event.stopPropagation();showCallHistoryModal(${c.id - 1})">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/><line x1="12" y1="7" x2="12" y2="12"/><polyline points="12 12 15 14"/></svg>
+             </button>`
+          : ''}
         ${c.status === 'dnc'
           ? `<button class="btn btn-icon" title="${tr('title.removeFromDnc')}" onclick="event.stopPropagation();removeContactFromDnc(${c.id})">
                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>

@@ -93,6 +93,7 @@
     <string name="source_remote_dial">📞 Created by remote dial</string>
     <string name="source_app_manual">➕ Added manually on device</string>
     <string name="source_unknown">Unknown source</string>
+    <string name="history_title">Call History</string>
 
     <!-- Remote dial -->
     <string name="toast_remote_dial">Backoffice: dialling %1$s</string>

@@ -406,6 +406,12 @@ class MainActivity : AppCompatActivity()
                     contact.calledAt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
                     val elapsedSec = if (callStartTime > 0L) ((System.currentTimeMillis() - callStartTime) / 1000).toInt() else 0
                     contact.callDuration = if (elapsedSec > 0) formatDuration(elapsedSec) else ""
+                    contact.callHistory.add(CallRecord(
+                        status = contact.status,
+                        notes = contact.notes,
+                        calledAt = contact.calledAt,
+                        callDuration = contact.callDuration
+                    ))
                     currentIndex++
                     if (dncCheckbox.isChecked) addToDnc(contact.phone)
                     saveState()
@@ -1037,6 +1043,57 @@ class MainActivity : AppCompatActivity()
             .show()
     }
 
+    private fun showCallHistoryDialog(position: Int)
+    {
+        val contact = contacts.getOrNull(position) ?: return
+        val history = contact.callHistory
+        if (history.isEmpty()) return
+
+        val dp = resources.displayMetrics.density
+        val pad = (16 * dp).toInt()
+
+        val scroll = android.widget.ScrollView(this)
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, pad, pad, pad)
+        }
+        scroll.addView(container)
+
+        history.reversed().forEachIndexed { idx, record ->
+            val callNum = history.size - idx
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(pad, pad, pad, pad)
+                setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.color_highlight_row))
+                val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                if (idx > 0) lp.topMargin = (8 * dp).toInt()
+                layoutParams = lp
+            }
+
+            fun addLine(text: String, bold: Boolean = false) {
+                card.addView(TextView(this).apply {
+                    this.text = text
+                    textSize = 13f
+                    if (bold) setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.color_contact_name))
+                })
+            }
+
+            addLine("#$callNum — ${record.calledAt}", bold = true)
+            addLine(statusLabel(record.status))
+            if (record.callDuration.isNotEmpty()) addLine("⏱ ${record.callDuration}")
+            if (record.notes.isNotEmpty()) addLine(record.notes)
+
+            container.addView(card)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("${contact.name} — ${getString(R.string.history_title)}")
+            .setView(scroll)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
     private fun showAddContactDialog()
     {
         val dp = resources.displayMetrics.density
@@ -1110,6 +1167,7 @@ class MainActivity : AppCompatActivity()
         if (calledAt     == null) calledAt     = ""
         if (source       == null) source       = ""
         if (callDuration == null) callDuration = ""
+        if (callHistory  == null) callHistory  = mutableListOf()
     }
 
     private fun MutableList<Contact>.sanitizeAll() = onEach { it.sanitize() }
@@ -1143,6 +1201,9 @@ class MainActivity : AppCompatActivity()
             },
             onItemLongClick = { position ->
                 showContactProfileDialog(position)
+            },
+            onHistoryClick = { position ->
+                showCallHistoryDialog(position)
             }
         )
         recyclerView.layoutManager = LinearLayoutManager(this)

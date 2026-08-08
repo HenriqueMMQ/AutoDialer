@@ -5,6 +5,7 @@ import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -13,7 +14,8 @@ class ContactAdapter(
     private var contacts: List<Contact>,
     private var currentIndex: Int,
     private val onItemClick: (Int) -> Unit,
-    private val onItemLongClick: (Int) -> Unit = {}
+    private val onItemLongClick: (Int) -> Unit = {},
+    private val onHistoryClick: (Int) -> Unit = {}
 ) : RecyclerView.Adapter<ContactAdapter.ViewHolder>()
 {
 
@@ -24,6 +26,7 @@ class ContactAdapter(
         val tvPhone: TextView = view.findViewById(R.id.tvPhone)
         val tvDuration: TextView = view.findViewById(R.id.tvDuration)
         val tvStatus: TextView = view.findViewById(R.id.tvStatus)
+        val btnHistory: ImageButton = view.findViewById(R.id.btnHistory)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder
@@ -82,6 +85,13 @@ class ContactAdapter(
             "callback_later" -> Color.parseColor("#6A1B9A")
             else -> Color.DKGRAY
         })
+
+        if (contact.callHistory.size > 1) {
+            holder.btnHistory.visibility = View.VISIBLE
+            holder.btnHistory.setOnClickListener { onHistoryClick(position) }
+        } else {
+            holder.btnHistory.visibility = View.GONE
+        }
 
         holder.itemView.setOnClickListener { onItemClick(position) }
         holder.itemView.setOnLongClickListener { onItemLongClick(position); true }

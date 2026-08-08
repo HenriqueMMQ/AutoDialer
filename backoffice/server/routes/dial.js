@@ -58,6 +58,14 @@ router.post('/result', (req, res) =>
         if (notes !== undefined) contact.notes = notes;
         if (calledAt) contact.calledAt = calledAt;
         if (callDuration !== undefined) contact.callDuration = callDuration;
+
+        if (!Array.isArray(contact.callHistory)) contact.callHistory = [];
+        contact.callHistory.push({
+            status:       status       || '',
+            notes:        notes        ?? '',
+            calledAt:     calledAt     || '',
+            callDuration: callDuration ?? ''
+        });
     }
 
     res.json({ ok: true });
