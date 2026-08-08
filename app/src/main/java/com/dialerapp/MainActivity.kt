@@ -269,6 +269,7 @@ class MainActivity : AppCompatActivity()
             currentIndex = 0
             saveState()
             refreshUI()
+            pushContactsToServer()
 
             Toast.makeText(this, getString(R.string.toast_loaded, contacts.size), Toast.LENGTH_SHORT).show()
 
@@ -672,6 +673,33 @@ class MainActivity : AppCompatActivity()
             callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
         else
             dialCurrent()
+    }
+
+    private fun pushContactsToServer()
+    {
+        val serverUrl = prefs.getString("serverUrl", "")?.trimEnd('/') ?: return
+        if (serverUrl.isEmpty()) return
+        val deviceId = getOrCreateDeviceId()
+        val payload = gson.toJson(mapOf(
+            "deviceId" to deviceId,
+            "contacts" to contacts.map { mapOf("id" to it.id, "name" to it.name, "phone" to it.phone, "status" to it.status) }
+        ))
+        Thread {
+            try
+            {
+                val url  = java.net.URL("$serverUrl/api/device/contacts")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+                conn.connectTimeout = 3000
+                conn.readTimeout    = 3000
+                conn.outputStream.use { it.write(payload.toByteArray()) }
+                conn.inputStream.bufferedReader().readText()
+                conn.disconnect()
+            }
+            catch (_: Exception) { }
+        }.start()
     }
 
     private fun saveState()

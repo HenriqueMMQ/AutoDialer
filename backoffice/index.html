@@ -345,6 +345,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       </button>
       <button class="btn" id="btn-clear" onclick="clearContacts()" style="display:none">Clear list</button>
+      <button class="btn" id="btn-sync-device" onclick="syncFromDevice()" title="Load contacts from the Android device">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Sync from device
+      </button>
       <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Import Excel
@@ -647,6 +651,42 @@ function clearContacts()
   document.querySelectorAll('.pill').forEach((p, i) => p.classList.toggle('active', i === 0));
   refresh();
   toast('Contact list cleared');
+}
+
+// ── DEVICE SYNC ───────────────────────────────
+async function syncFromDevice()
+{
+  const btn = document.getElementById('btn-sync-device');
+  btn.disabled = true;
+  try
+  {
+    const res  = await fetch(`${API}/api/device/contacts`, { signal: AbortSignal.timeout(4000) });
+    const data = await res.json();
+    if (!data.devices || data.devices.length === 0)
+    {
+      toast('No device has synced contacts yet — open the app and load a file first', 4000);
+      return;
+    }
+    // Use the most recently synced device
+    const latest = data.devices.sort((a, b) => new Date(b.syncedAt) - new Date(a.syncedAt))[0];
+    contacts = latest.contacts.map(c => ({
+      id: c.id, name: c.name, phone: c.phone,
+      status: c.status || 'pending', calledAt: '', notes: ''
+    }));
+    currentIndex = contacts.findIndex(c => c.status === 'pending');
+    if (currentIndex === -1) currentIndex = contacts.length;
+    refresh();
+    const ago = Math.round((Date.now() - new Date(latest.syncedAt)) / 1000);
+    toast(`Synced ${contacts.length} contacts from device (${ago}s ago)`);
+  }
+  catch
+  {
+    toast('Could not reach server', 3000);
+  }
+  finally
+  {
+    btn.disabled = false;
+  }
 }
 
 // ── FILTER / SORT ─────────────────────────────
