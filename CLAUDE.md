@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## TODOs
+
+- **Backoffice sidebar nav** — Dashboard, Activity, Devices, and Preferences nav items are hidden (commented out in `backoffice/index.html`). Decide what each section should do and implement content panels + `setNav()` switching logic. Candidates: Dashboard → summary stats (calls made, contacted %); Activity → persistent call history log (needs server-side storage); Devices → device management UI (syncFromDevice/pushToDevice already exist); Preferences → language/theme toggles.
+
 ## Build & Run
 
 This is an Android app built with Gradle. Use Android Studio or the Gradle wrapper:
