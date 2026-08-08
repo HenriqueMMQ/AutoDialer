@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -24,14 +25,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.google.android.material.snackbar.Snackbar
-import androidx.documentfile.provider.DocumentFile
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -43,7 +46,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnLoad: Button
     private lateinit var btnDial: FloatingActionButton
     private lateinit var btnReload: Button
-    private lateinit var btnBrowseFolder: Button
+    private lateinit var btnShareResults: Button
     private lateinit var btnSettings: Button
     private lateinit var statusText: TextView
     private lateinit var checkAutoCall: CheckBox
@@ -61,28 +64,14 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            // Persist read permission across reboots
             contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            val fileName = DocumentFile.fromSingleUri(this, it)?.name ?: it.lastPathSegment ?: "file"
+            val fileName = it.lastPathSegment?.substringAfterLast("/") ?: "file"
             prefs.edit()
                 .putString("lastFileUri", it.toString())
                 .putString("lastFileName", fileName)
                 .apply()
             updateReloadButton(fileName)
             loadExcelFile(it)
-        }
-    }
-
-    private val folderPicker = registerForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri?.let {
-            contentResolver.takePersistableUriPermission(
-                it,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
-            prefs.edit().putString("folderUri", it.toString()).apply()
-            showFolderFilePicker(it)
         }
     }
 
@@ -101,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         btnLoad = findViewById(R.id.btnLoad)
         btnDial = findViewById(R.id.btnDial)
         btnReload = findViewById(R.id.btnReload)
-        btnBrowseFolder = findViewById(R.id.btnBrowseFolder)
+        btnShareResults = findViewById(R.id.btnShareResults)
         btnSettings = findViewById(R.id.btnSettings)
 
         btnSettings.setOnClickListener {
@@ -115,14 +104,7 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().putBoolean("autoCall", checked).apply()
         }
 
-        // Restore reload button label if a last file is saved
         prefs.getString("lastFileName", null)?.let { updateReloadButton(it) }
-
-        // Update folder button label if a folder is already granted
-        prefs.getString("folderUri", null)?.let {
-            val folderName = DocumentFile.fromTreeUri(this, Uri.parse(it))?.name ?: "DialerApp Folder"
-            btnBrowseFolder.text = "Browse: $folderName"
-        }
 
         btnLoad.setOnClickListener {
             filePicker.launch(arrayOf(
@@ -136,22 +118,7 @@ class MainActivity : AppCompatActivity() {
             loadExcelFile(Uri.parse(uriString))
         }
 
-        btnBrowseFolder.setOnClickListener {
-            val savedFolder = prefs.getString("folderUri", null)
-            if (savedFolder != null) {
-                showFolderFilePicker(Uri.parse(savedFolder))
-            } else {
-                AlertDialog.Builder(this)
-                    .setTitle("Set DialerApp Folder")
-                    .setMessage(
-                        "Connect your phone to a PC via USB and create a folder (e.g. Downloads/DialerApp) " +
-                        "where you'll place your Excel files.\n\nTap OK to select that folder now."
-                    )
-                    .setPositiveButton("OK") { _, _ -> folderPicker.launch(null) }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-            }
-        }
+        btnShareResults.setOnClickListener { shareResults() }
 
         btnDial.setOnClickListener {
             if (currentIndex >= contacts.size) {
@@ -168,52 +135,49 @@ class MainActivity : AppCompatActivity() {
         }
 
         restoreState()
+
+        // Handle file shared/opened before the activity was created
+        if (savedInstanceState == null) {
+            handleIncomingIntent(intent)
+        }
+
         refreshUI()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent) {
+        val uri: Uri? = when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                }
+            }
+            else -> null
+        }
+        if (uri != null) {
+            val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: "shared_file"
+            prefs.edit()
+                .putString("lastFileUri", uri.toString())
+                .putString("lastFileName", fileName)
+                .apply()
+            updateReloadButton(fileName)
+            loadExcelFile(uri)
+            // Clear the action so rotating the screen doesn't re-load
+            intent.action = null
+        }
     }
 
     private fun updateReloadButton(fileName: String) {
         btnReload.text = "Reload: $fileName"
         btnReload.visibility = android.view.View.VISIBLE
-    }
-
-    private fun showFolderFilePicker(folderUri: Uri) {
-        val folder = DocumentFile.fromTreeUri(this, folderUri)
-        if (folder == null || !folder.exists()) {
-            Toast.makeText(this, "Folder not accessible. Please re-select it.", Toast.LENGTH_LONG).show()
-            prefs.edit().remove("folderUri").apply()
-            btnBrowseFolder.text = "Browse DialerApp Folder"
-            return
-        }
-
-        val excelFiles = folder.listFiles().filter { file ->
-            file.isFile && (file.name?.endsWith(".xlsx", ignoreCase = true) == true ||
-                            file.name?.endsWith(".xls", ignoreCase = true) == true)
-        }
-
-        if (excelFiles.isEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle("No Excel Files Found")
-                .setMessage("No .xlsx or .xls files were found in the selected folder. Copy your files there and try again.")
-                .setPositiveButton("OK", null)
-                .show()
-            return
-        }
-
-        val names = excelFiles.map { it.name ?: "unknown" }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("Select Excel File")
-            .setItems(names) { _, which ->
-                val selected = excelFiles[which]
-                val uri = selected.uri
-                prefs.edit()
-                    .putString("lastFileUri", uri.toString())
-                    .putString("lastFileName", selected.name ?: "file")
-                    .apply()
-                updateReloadButton(selected.name ?: "file")
-                loadExcelFile(uri)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun loadExcelFile(uri: Uri) {
@@ -236,7 +200,7 @@ class MainActivity : AppCompatActivity() {
                     header.contains("Number", ignoreCase = true) -> phoneCol = c
                 }
             }
-            if (phoneCol == -1) throw Exception("No 'Phone' or 'PhoneNumber' column found in header row")
+            if (phoneCol == -1) throw Exception("No 'Phone' or 'Number' column found in the header row")
 
             for (i in 1..sheet.lastRowNum) {
                 val row = sheet.getRow(i) ?: continue
@@ -342,7 +306,7 @@ class MainActivity : AppCompatActivity() {
                     contact.calledAt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
                     currentIndex++
                     saveState()
-                    exportResults()
+                    exportResultsSilently()
                     refreshUI()
                     if (checkAutoCall.isChecked && currentIndex < contacts.size) {
                         scheduleAutoCall()
@@ -353,33 +317,22 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun exportResults() {
-        val folderUriString = prefs.getString("folderUri", null) ?: return
-        val folderUri = Uri.parse(folderUriString)
-        val folder = DocumentFile.fromTreeUri(this, folderUri) ?: return
-
+    private fun resultsFile(): File {
         val originalName = prefs.getString("lastFileName", "contacts") ?: "contacts"
         val resultsName = originalName.substringBeforeLast(".") + "_results.xlsx"
+        return File(getExternalFilesDir(null), resultsName)
+    }
 
-        // Delete old results file if it exists
-        folder.findFile(resultsName)?.delete()
-
-        val resultsFile = folder.createFile(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            resultsName
-        ) ?: return
-
+    private fun exportResultsSilently() {
         try {
             val workbook = XSSFWorkbook()
             val sheet = workbook.createSheet("Results")
 
-            // Header row
             val headerRow = sheet.createRow(0)
             listOf("Name", "Phone", "Status", "Notes", "Called At").forEachIndexed { i, title ->
                 headerRow.createCell(i).setCellValue(title)
             }
 
-            // Data rows — only contacts that have been called
             contacts.filter { it.status != "pending" && it.status != "dialing" }
                 .forEachIndexed { rowIdx, contact ->
                     val row = sheet.createRow(rowIdx + 1)
@@ -391,12 +344,26 @@ class MainActivity : AppCompatActivity() {
                 }
 
             for (i in 0..4) sheet.autoSizeColumn(i)
-
-            contentResolver.openOutputStream(resultsFile.uri)?.use { workbook.write(it) }
+            FileOutputStream(resultsFile()).use { workbook.write(it) }
             workbook.close()
         } catch (e: Exception) {
             Toast.makeText(this, "Could not save results: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun shareResults() {
+        val file = resultsFile()
+        if (!file.exists()) {
+            Toast.makeText(this, "No results to share yet", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val fileUri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            putExtra(Intent.EXTRA_STREAM, fileUri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(shareIntent, "Share results via…"))
     }
 
     private fun scheduleAutoCall(secondsLeft: Int = prefs.getInt("autoCallDelay", 5)) {
@@ -443,7 +410,7 @@ class MainActivity : AppCompatActivity() {
 
         val remaining = contacts.size - currentIndex
         statusText.text = if (contacts.isEmpty()) {
-            "Load an Excel file to start"
+            "Share an Excel file to this app to start"
         } else if (remaining <= 0) {
             "Queue complete! ${contacts.size} contacts processed."
         } else {
@@ -453,6 +420,9 @@ class MainActivity : AppCompatActivity() {
         val dialEnabled = contacts.isNotEmpty() && currentIndex < contacts.size
         btnDial.isEnabled = dialEnabled
         btnDial.alpha = if (dialEnabled) 1.0f else 0.4f
+
+        val hasResults = contacts.any { it.status != "pending" && it.status != "dialing" }
+        btnShareResults.visibility = if (hasResults) android.view.View.VISIBLE else android.view.View.GONE
 
         if (currentIndex < contacts.size) {
             recyclerView.scrollToPosition(currentIndex)

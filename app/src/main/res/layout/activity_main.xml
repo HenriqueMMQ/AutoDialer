@@ -108,11 +108,12 @@
                 </LinearLayout>
 
                 <Button
-                    android:id="@+id/btnBrowseFolder"
+                    android:id="@+id/btnShareResults"
                     android:layout_width="match_parent"
                     android:layout_height="44dp"
-                    android:text="Browse DialerApp Folder"
-                    android:backgroundTint="#6A1B9A"
+                    android:text="Share Results"
+                    android:backgroundTint="#1565C0"
+                    android:visibility="gone"
                     android:layout_marginBottom="8dp" />
 
                 <CheckBox
