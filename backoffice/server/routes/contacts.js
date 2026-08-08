@@ -45,6 +45,20 @@ router.get('/', (req, res) =>
     res.json({ contacts: state.sessionContacts });
 });
 
+// POST /api/contacts/set — backoffice sets the session list directly (no file needed)
+router.post('/set', (req, res) =>
+{
+    const { contacts } = req.body;
+    if (!Array.isArray(contacts))
+        return res.status(400).json({ error: 'contacts must be an array' });
+
+    state.sessionContacts = contacts.map(c => ({
+        id: c.id, name: c.name, phone: c.phone,
+        status: c.status || 'pending', calledAt: c.calledAt || '', notes: c.notes || ''
+    }));
+    res.json({ ok: true, count: state.sessionContacts.length });
+});
+
 // PATCH /api/contacts/:id — update a contact's status/notes after a call
 router.patch('/:id', (req, res) =>
 {
