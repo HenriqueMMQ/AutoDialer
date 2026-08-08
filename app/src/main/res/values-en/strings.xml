@@ -103,4 +103,16 @@
     <string name="dialog_hint_phone">Phone</string>
     <string name="toast_contact_added">Contact added</string>
     <string name="toast_contact_invalid">Name and phone are required</string>
+
+    <!-- Replace contacts confirmation -->
+    <string name="dialog_title_replace_contacts">Replace list?</string>
+    <string name="dialog_message_replace_contacts">A list is already loaded. Loading a new file will permanently delete the current list and any unsaved results. Continue?</string>
+    <string name="dialog_replace_confirm">Replace</string>
+
+    <!-- Do Not Call -->
+    <string name="status_dnc">Do Not Call</string>
+    <string name="dialog_add_to_dnc">Add to Do Not Call list (DNC)</string>
+    <string name="toast_dnc_added">Number added to DNC list</string>
+    <string name="toast_dnc_synced">DNC list synced: %1$d number(s)</string>
+    <string name="toast_dnc_skipped">DNC contact skipped automatically</string>
 </resources>

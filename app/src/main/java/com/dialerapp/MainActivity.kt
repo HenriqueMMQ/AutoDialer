@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity()
 
     private var contacts: MutableList<Contact> = mutableListOf()
     private var currentIndex: Int = 0
+    private val dncNumbers: MutableSet<String> = mutableSetOf()
 
     private val autoCallHandler = Handler(Looper.getMainLooper())
     private var autoCallRunnable: Runnable? = null
@@ -154,6 +155,7 @@ class MainActivity : AppCompatActivity()
         }
 
         restoreState()
+        loadDncFromServer()
 
         if (savedInstanceState == null)
             handleIncomingIntent(intent)
@@ -205,6 +207,21 @@ class MainActivity : AppCompatActivity()
     }
 
     private fun loadExcelFile(uri: Uri)
+    {
+        if (contacts.isNotEmpty())
+        {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_title_replace_contacts)
+                .setMessage(R.string.dialog_message_replace_contacts)
+                .setPositiveButton(R.string.dialog_replace_confirm) { _, _ -> doLoadExcelFile(uri) }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return
+        }
+        doLoadExcelFile(uri)
+    }
+
+    private fun doLoadExcelFile(uri: Uri)
     {
         try
         {
@@ -271,6 +288,7 @@ class MainActivity : AppCompatActivity()
             contacts.clear()
             contacts.addAll(newContacts)
             currentIndex = 0
+            applyDncToContacts()
             saveState()
             refreshUI()
             pushContactsToServer()
@@ -286,6 +304,10 @@ class MainActivity : AppCompatActivity()
 
     private fun dialCurrent()
     {
+        // Skip any DNC contacts silently
+        while (currentIndex < contacts.size && contacts[currentIndex].status == "dnc")
+            currentIndex++
+
         if (currentIndex >= contacts.size)
             return
         val contact = contacts[currentIndex]
@@ -353,6 +375,16 @@ class MainActivity : AppCompatActivity()
         }
         container.addView(notesInput)
 
+        val dncCheckbox = CheckBox(this).apply()
+        {
+            text = getString(R.string.dialog_add_to_dnc)
+            textSize = 13f
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            lp.topMargin = (12 * resources.displayMetrics.density).toInt()
+            layoutParams = lp
+        }
+        container.addView(dncCheckbox)
+
         AlertDialog.Builder(this)
             .setTitle(R.string.dialog_title_call_result)
             .setView(container)
@@ -367,6 +399,7 @@ class MainActivity : AppCompatActivity()
                     contact.notes = notesInput.text.toString().trim()
                     contact.calledAt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
                     currentIndex++
+                    if (dncCheckbox.isChecked) addToDnc(contact.phone)
                     saveState()
                     exportResultsSilently()
                     refreshUI()
@@ -397,6 +430,7 @@ class MainActivity : AppCompatActivity()
         "not_interested" -> getString(R.string.status_not_interested)
         "wrong_number"   -> getString(R.string.status_wrong_number)
         "dialed"         -> getString(R.string.status_dialed)
+        "dnc"            -> getString(R.string.status_dnc)
         else             -> status.replace("_", " ")
     }
 
@@ -652,6 +686,17 @@ class MainActivity : AppCompatActivity()
                     }
                 }
 
+                val pendingDnc = json.get("pendingDncSync")
+                if (pendingDnc != null && !pendingDnc.isJsonNull)
+                {
+                    val arr = pendingDnc.asJsonObject.get("phones")?.asJsonArray
+                    if (arr != null)
+                    {
+                        val incoming = arr.map { it.asString }.toSet()
+                        pollHandler.post { mergeDncFromServer(incoming) }
+                    }
+                }
+
                 val pending = json.get("pending")
                 if (pending != null && !pending.isJsonNull)
                 {
@@ -681,6 +726,7 @@ class MainActivity : AppCompatActivity()
         contacts.clear()
         contacts.addAll(incoming)
         currentIndex = 0
+        applyDncToContacts()
         saveState()
         refreshUI()
         Toast.makeText(this, getString(R.string.toast_contacts_synced, contacts.size), Toast.LENGTH_SHORT).show()
@@ -759,6 +805,91 @@ class MainActivity : AppCompatActivity()
             try
             {
                 val url  = java.net.URL("$serverUrl/api/device/contacts")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+                conn.connectTimeout = 3000
+                conn.readTimeout    = 3000
+                conn.outputStream.use { it.write(payload.toByteArray()) }
+                conn.inputStream.bufferedReader().readText()
+                conn.disconnect()
+            }
+            catch (_: Exception) { }
+        }.start()
+    }
+
+    private fun normPhone(phone: String) = phone.replace(Regex("\\D"), "")
+
+    private fun isOnDnc(phone: String): Boolean
+    {
+        val n = normPhone(phone)
+        return n.isNotEmpty() && dncNumbers.contains(n)
+    }
+
+    private fun applyDncToContacts()
+    {
+        contacts.forEach { c -> if (isOnDnc(c.phone) && c.status != "dnc") c.status = "dnc" }
+    }
+
+    private fun addToDnc(phone: String)
+    {
+        val normalized = normPhone(phone)
+        if (normalized.isEmpty()) return
+        dncNumbers.add(normalized)
+        applyDncToContacts()
+        saveState()
+        refreshUI()
+        pushDncToServer(setOf(normalized))
+        Toast.makeText(this, getString(R.string.toast_dnc_added), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun mergeDncFromServer(incoming: Set<String>)
+    {
+        val added = incoming - dncNumbers
+        if (added.isEmpty()) return
+        dncNumbers.addAll(incoming)
+        applyDncToContacts()
+        saveState()
+        refreshUI()
+        Toast.makeText(this, getString(R.string.toast_dnc_synced, added.size), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun loadDncFromServer()
+    {
+        val serverUrl = prefs.getString("serverUrl", "")?.trimEnd('/') ?: return
+        if (serverUrl.isEmpty()) return
+        Thread {
+            try
+            {
+                val url  = java.net.URL("$serverUrl/api/dnc")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 3000
+                conn.readTimeout    = 3000
+                val body = conn.inputStream.bufferedReader().readText()
+                conn.disconnect()
+
+                val json         = gson.fromJson(body, com.google.gson.JsonObject::class.java)
+                val arr          = json.get("phones")?.asJsonArray ?: return@Thread
+                val serverPhones = arr.map { it.asString }.toSet()
+                val localOnly    = dncNumbers.toSet() - serverPhones
+                // Push any numbers we have locally that the server doesn't know about
+                if (localOnly.isNotEmpty()) pushDncToServer(localOnly)
+                pollHandler.post { mergeDncFromServer(serverPhones) }
+            }
+            catch (_: Exception) { }
+        }.start()
+    }
+
+    private fun pushDncToServer(phones: Set<String>)
+    {
+        val serverUrl = prefs.getString("serverUrl", "")?.trimEnd('/') ?: return
+        if (serverUrl.isEmpty()) return
+        val payload = gson.toJson(mapOf("phones" to phones.toList()))
+        Thread {
+            try
+            {
+                val url  = java.net.URL("$serverUrl/api/dnc")
                 val conn = url.openConnection() as java.net.HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json")
@@ -899,6 +1030,7 @@ class MainActivity : AppCompatActivity()
                 contacts.add(newContact)
                 saveState()
                 refreshUI()
+                pushContactsToServer()
                 Toast.makeText(this, R.string.toast_contact_added, Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -910,6 +1042,7 @@ class MainActivity : AppCompatActivity()
         prefs.edit()
             .putString("contacts", gson.toJson(contacts))
             .putInt("currentIndex", currentIndex)
+            .putString("dncNumbers", gson.toJson(dncNumbers.toList()))
             .apply()
     }
 
@@ -925,6 +1058,14 @@ class MainActivity : AppCompatActivity()
 
     private fun restoreState()
     {
+        val dncJson = prefs.getString("dncNumbers", null)
+        if (dncJson != null)
+        {
+            val type = object : TypeToken<List<String>>() {}.type
+            val saved: List<String> = gson.fromJson(dncJson, type)
+            dncNumbers.addAll(saved)
+        }
+
         val json = prefs.getString("contacts", null)
         if (json != null)
         {
