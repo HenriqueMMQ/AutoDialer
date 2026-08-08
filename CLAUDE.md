@@ -13,52 +13,86 @@ This is an Android app built with Gradle. Use Android Studio or the Gradle wrapp
 # Install on connected device/emulator
 ./gradlew installDebug
 
-# Run tests
-./gradlew test
-
 # Lint
 ./gradlew lint
 ```
 
 The compiled debug APK is output to `app/build/outputs/apk/debug/app-debug.apk`.
 
-Note: there is no `gradlew` wrapper script in the repo root — builds must be run from Android Studio.
+**There is no `gradlew` wrapper in the repo root** — Gradle commands must be run from Android Studio's terminal (which sets up the wrapper path) or with a globally-installed Gradle.
 
-## Architecture
+There are no automated tests in the repository.
 
-Single-activity Android app (`minSdk 26`, `targetSdk 34`, Kotlin) with no navigation library — just two activities:
+---
 
-- **`MainActivity`** — the main dialing queue. Loads contacts from an Excel file, displays them in a `RecyclerView`, and sequences outbound calls via `Intent.ACTION_CALL`. State (contacts list + `currentIndex`) is persisted to `SharedPreferences` as JSON via Gson so the queue survives process death. Also polls the backoffice server every 3 seconds for remote dial commands.
-- **`SettingsActivity`** — configures the auto-call delay, and the backoffice server URL.
+## Android App Architecture
+
+Single-activity app (`minSdk 26`, `targetSdk 34`, Kotlin 17, no Jetpack Compose, no ViewModel/LiveData, no Hilt). Two activities:
+
+- **`MainActivity`** — dialing queue. Loads contacts from an Excel file, renders them in a `RecyclerView`, sequences outbound calls via `Intent.ACTION_CALL`. Polls the backoffice server every 3 s for remote dial commands.
+- **`SettingsActivity`** — configures auto-call delay and the backoffice server URL.
 
 ### Data flow
 
 1. User picks an `.xlsx`/`.xls` file (file picker) or browses a previously-granted folder URI.
-2. Apache POI parses the sheet; rows become `Contact` objects (fields: `id`, `name`, `phone`, `status`, `notes`, `calledAt`).
-3. `ContactAdapter` renders the list; `currentIndex` tracks which contact is next.
+2. Apache POI parses the sheet; rows become `Contact` objects (`id`, `name`, `phone`, `status`, `notes`, `calledAt`, `source`).
+3. `ContactAdapter` renders the list; `currentIndex` in `MainActivity` tracks which contact is next.
 4. Tapping the FAB triggers `dialCurrent()` → `Intent.ACTION_CALL` → system phone app.
-5. On return, a disposition dialog captures the call outcome; result is written back to the contact and the list is re-exported to `<originalName>_results.xlsx` in the granted folder via Apache POI (`XSSFWorkbook`).
-6. If "Auto Call" is checked, `scheduleAutoCall()` uses a `Handler` countdown and shows a cancellable `Snackbar` before dialing the next contact.
+5. On return, a disposition dialog captures the outcome; the result is written back to the contact and re-exported to `<originalName>_results.xlsx` in the granted folder via Apache POI.
+6. If "Auto Call" is checked, `scheduleAutoCall()` runs a recursive `Handler.postDelayed` countdown (1-s ticks) and shows a cancellable `Snackbar`.
 
 ### Key persistence details
 
-- `SharedPreferences` key `"dialer_state"` stores `contacts` (JSON), `currentIndex`, `lastFileUri`, `lastFileName`, `folderUri`, `autoCall` (bool), `autoCallDelay` (int seconds), `serverUrl` (string), and `deviceId` (UUID).
-- Folder and file URI permissions are persisted with `takePersistableUriPermission` so they survive reboots.
-- Results export overwrites `<name>_results.xlsx` in the same folder on every disposition save.
+- `SharedPreferences` key `"dialer_state"` stores `contacts` (JSON via Gson), `currentIndex`, `lastFileUri`, `lastFileName`, `folderUri`, `autoCall`, `autoCallDelay`, `serverUrl`, and `deviceId` (stable UUID).
+- Folder and file URI permissions are held with `takePersistableUriPermission` so they survive reboots.
+- Results export uses the original file (`template.$ext` copied to `getExternalFilesDir(null)/`) as a base, appending Status / Notes / CalledAt columns. This is required because POI cannot stream `.xlsx` from a `ContentResolver` URI directly.
+- Results overwrite `<name>_results.xlsx` in the same folder on every disposition save.
 
 ### Excel column detection
 
-The loader scans the header row for a column named `"Name"` (case-insensitive) and one containing `"Phone"` or `"Number"`. Numeric phone cells are cast via `toLong().toString()` to strip the decimal.
+The loader recognises English headers (`Name`, `Phone`, `Number`) and Portuguese headers (`Nome`, `Telefone`, `Número`) — all case-insensitive. Numeric phone cells are cast via `toLong().toString()` to strip the decimal point.
+
+### Contact source tracking
+
+`Contact.source` is a non-null `String` (default `""`). Defined values:
+
+| Value | Origin |
+|---|---|
+| `"app_excel"` | Loaded from device file picker |
+| `"app_manual"` | Added via in-app Add Contact dialog |
+| `"backoffice_excel"` | Excel uploaded through backoffice UI |
+| `"backoffice_manual"` | Added via `POST /api/contacts/set` |
+| `"remote_dial"` | Temporary contact created when backoffice dials a number not in the local list |
+
+The `sanitize()` extension gives contacts persisted before `source` was added an empty string, preventing crashes on deserialization.
+
+### Async patterns
+
+All network calls (polling, result reporting) use bare `Thread { }` blocks posting back to the main thread via `Handler.post()`. There are no coroutines, no OkHttp/Retrofit — only `java.net.HttpURLConnection`. Errors are silently swallowed with `catch (_: Exception) {}`.
+
+### Theming / dark mode
+
+The theme is `Theme.MaterialComponents.DayNight.NoActionBar` — dark mode is fully system-driven, no programmatic toggle. Light and dark color palettes live in `values/colors.xml` and `values-night/colors.xml` respectively. The header uses `@drawable/header_gradient` (with a `drawable-night/` variant) on a plain `LinearLayout` — no Toolbar/AppBar.
+
+**Hard-coded colors that do NOT adapt to dark mode:** status text in `ContactAdapter.onBindViewHolder` (`Color.parseColor()` literals) and source chip backgrounds in `showContactProfileDialog`. Phone number text (`#78909C`) in `item_contact.xml` is also hard-coded. Everything else uses theme color resources.
+
+### APK packaging note
+
+`app/build.gradle` excludes several `META-INF/` files (`DEPENDENCIES`, `LICENSE*`, `NOTICE*`) from the APK — this is required to avoid duplicate-file build errors from Apache POI's transitive dependencies.
+
+### File sharing
+
+A `FileProvider` (authority `${packageName}.fileprovider`) exposes `getExternalFilesDir(null)` so the results XLSX can be shared via `Intent.ACTION_SEND`.
 
 ---
 
 ## Backoffice
 
-A Node.js/Express web server with a browser UI for managing and remotely triggering calls.
+A Node.js/Express web server with a single-page browser UI for managing contacts and remotely triggering calls.
 
 **Live URL:** `https://autodialer-os6o.onrender.com`
 
-Deployed on Render (free tier, Docker runtime). Auto-deploys from the `main` branch. The `Dockerfile` is at the repo root; it copies `backoffice/server/` as the app and `backoffice/index.html` into `public/`.
+Deployed on Render (free tier, Docker). Auto-deploys from `main`. **Render uses `backoffice/server/Dockerfile`** (with `dockerContext: backoffice/server` in `render.yaml`) — not the root `Dockerfile`. The root Dockerfile correctly copies `backoffice/index.html` into `public/`; the server Dockerfile does not, so in production the UI is served from the server's fallback path.
 
 ### Running locally
 
@@ -68,29 +102,45 @@ npm install
 node index.js        # server at http://localhost:3000
 ```
 
-The backoffice UI is served as a static file from the same Express process. Set the Android app's Server URL (in Settings) to the machine's LAN IP, e.g. `http://192.168.1.247:3000`. Windows Firewall must allow inbound TCP on port 3000.
+Set the Android app's Server URL (Settings) to the machine's LAN IP, e.g. `http://192.168.1.247:3000`. Windows Firewall must allow inbound TCP on port 3000.
 
-### Backoffice API
+### Server state
+
+All state lives in `backoffice/server/state.js` — a plain CommonJS export mutated directly by route handlers. Three fields:
+
+- `sessionContacts` — array of contact objects for the current session
+- `pendingDial` — `{ contactId, name, phone, queuedAt }` or `null`
+- `pendingContactsSync` — `{ contacts, setAt }` or `null`
+
+State is **in-memory and resets on server restart**. The Render free tier spins down after 15 min of inactivity, but the Android app's polling keeps it alive.
+
+### API routes
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/status` | Health check |
-| `POST` | `/api/contacts/upload` | Upload an Excel file; returns parsed contact list |
+| `POST` | `/api/contacts/upload` | Upload an Excel file (via `multer` + `xlsx` npm package); returns parsed contact list |
+| `POST` | `/api/contacts/set` | Set session contacts directly from a JSON body (source: `backoffice_manual`) |
 | `GET` | `/api/contacts` | Return current session contact list |
 | `PATCH` | `/api/contacts/:id` | Update a contact's status/notes |
 | `POST` | `/api/dial` | Queue a dial command `{ contactId, name, phone }` |
-| `GET` | `/api/dial/next?deviceId=<uuid>` | Android app polls this; returns and clears the pending command |
-| `POST` | `/api/dial/result` | Android app reports call outcome |
+| `GET` | `/api/dial/next?deviceId=<uuid>` | Android polls this; returns and clears `pendingDial` |
+| `POST` | `/api/dial/result` | Android reports call outcome |
+| `POST` | `/api/device/contacts` | Android pushes its loaded contact list (keyed by `deviceId`) to `deviceContacts` |
+| `GET` | `/api/device/contacts` | Returns all `{ deviceId, contacts, syncedAt }` entries |
+| `POST` | `/api/device/push` | Backoffice pushes contacts to all devices via `pendingContactsSync` |
 
 ### Polling architecture
 
-The Android app polls `GET /api/dial/next?deviceId=<uuid>` every 3 seconds while `MainActivity` is in the foreground (`onResume` / `onPause`). Each device generates a stable UUID on first run (stored in `SharedPreferences` as `deviceId`). When the backoffice queues a command via `POST /api/dial`, the next poll picks it up, matches the phone number against the local contact list, and triggers `dialCurrent()`.
-
-**Note:** server state (contact list, pending dial) is in-memory and resets on restart. The free Render tier spins down after 15 min of inactivity, but the app's polling keeps it alive while any agent's phone has the app open.
+The Android app polls `GET /api/dial/next?deviceId=<uuid>` every 3 s while `MainActivity` is in the foreground (`onResume` / `onPause`). The server also delivers `pendingContactsSync` on this same endpoint response, so a single poll handles both dial commands and contact-list pushes.
 
 ### Future: multi-agent login
 
-The `deviceId` UUID is already sent with every poll request, laying the groundwork for routing commands to a specific phone. When multiple agents use the app, a login system should:
-1. Associate `deviceId` with a user identity on the server
-2. Have `POST /api/dial` accept a `targetDeviceId` so the backoffice can address a specific phone
-3. `GET /api/dial/next` only returns commands addressed to the polling device's `deviceId`
+The `deviceId` UUID is already sent with every poll request, laying the groundwork for routing commands to specific phones. When multiple agents use the app:
+1. Associate `deviceId` with a user identity on the server.
+2. Have `POST /api/dial` accept a `targetDeviceId`.
+3. `GET /api/dial/next` only returns commands addressed to the polling device.
+
+### Localization
+
+The app is bilingual. Default strings (`values/strings.xml`) are Portuguese; English strings are in `values-en/strings.xml`. Exported Excel column headers and status labels are also localized — export files reflect the device language.
