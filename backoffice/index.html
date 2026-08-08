@@ -418,6 +418,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add contact
       </button>
+      <button class="btn" onclick="exportExcel()" id="btn-export" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export Excel
+      </button>
       <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Import Excel
@@ -794,6 +798,12 @@ function doDrop(e)
   if (file) { document.getElementById('file-input').files = e.dataTransfer.files; handleFile(document.getElementById('file-input')); }
 }
 
+// ── EXPORT ────────────────────────────────────
+function exportExcel()
+{
+  window.location.href = '/api/contacts/export';
+}
+
 // ── SAMPLE DATA ───────────────────────────────
 function loadSampleData(e)
 {
@@ -831,6 +841,7 @@ function refresh()
   document.getElementById('nb-contacts').textContent   = total;
   document.getElementById('btn-clear').style.display        = total ? '' : 'none';
   document.getElementById('btn-push-device').style.display  = total ? '' : 'none';
+  document.getElementById('btn-export').style.display       = total ? '' : 'none';
 
   const has = total > 0;
   document.getElementById('filter-bar').style.display      = has ? '' : 'none';

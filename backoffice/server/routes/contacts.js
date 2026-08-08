@@ -63,6 +63,33 @@ router.post('/set', (req, res) =>
     res.json({ ok: true, count: state.sessionContacts.length });
 });
 
+// GET /api/contacts/export — download current session list as .xlsx
+router.get('/export', (req, res) =>
+{
+    const contacts = state.sessionContacts;
+    if (!contacts.length)
+        return res.status(404).json({ error: 'No contacts to export' });
+
+    const rows = contacts.map(c => ({
+        Name:      c.name,
+        Phone:     c.phone,
+        Status:    c.status,
+        Notes:     c.notes    || '',
+        'Called at': c.calledAt || '',
+        Duration:  c.callDuration || '',
+    }));
+
+    const wb   = XLSX.utils.book_new();
+    const ws   = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Contacts');
+
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const filename = `contacts_${new Date().toISOString().slice(0,10)}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
+});
+
 // PATCH /api/contacts/:id — update a contact's status/notes after a call
 router.patch('/:id', (req, res) =>
 {
