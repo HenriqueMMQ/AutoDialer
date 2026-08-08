@@ -489,7 +489,6 @@ class MainActivity : AppCompatActivity()
 
                 contacts.forEachIndexed()
                 { idx, contact ->
-                    if (contact.status == "pending" || contact.status == "dialing") return@forEachIndexed
                     val row = sheet.getRow(idx + 1) ?: sheet.createRow(idx + 1)
                     row.createCell(statusCol).setCellValue(statusLabel(contact.status))
                     row.createCell(notesCol).setCellValue(contact.notes)
@@ -511,8 +510,7 @@ class MainActivity : AppCompatActivity()
                     getString(R.string.col_called_at),
                     getString(R.string.col_duration)
                 ).forEachIndexed { i, title -> headerRow.createCell(i).setCellValue(title) }
-                contacts.filter { it.status != "pending" && it.status != "dialing" }
-                    .forEachIndexed()
+                contacts.forEachIndexed()
                     { rowIdx, contact ->
                         val row = sheet.createRow(rowIdx + 1)
                         row.createCell(0).setCellValue(contact.name)
@@ -543,8 +541,7 @@ class MainActivity : AppCompatActivity()
 
     private fun shareResults()
     {
-        val hasProcessed = contacts.any { it.status != "pending" && it.status != "dialing" }
-        if (!hasProcessed)
+        if (contacts.isEmpty())
         {
             Toast.makeText(this, R.string.toast_no_results, Toast.LENGTH_SHORT).show()
             return
