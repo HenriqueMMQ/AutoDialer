@@ -2,9 +2,11 @@ package com.dialerapp
 
 import android.os.Bundle
 import android.widget.Button
+import android.widget.EditText
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.doAfterTextChanged
 
 class SettingsActivity : AppCompatActivity()
 {
@@ -34,5 +36,11 @@ class SettingsActivity : AppCompatActivity()
             override fun onStartTrackingTouch(seekBar: SeekBar) {}
             override fun onStopTrackingTouch(seekBar: SeekBar) {}
         })
+
+        val editServerUrl = findViewById<EditText>(R.id.editServerUrl)
+        editServerUrl.setText(prefs.getString("serverUrl", ""))
+        editServerUrl.doAfterTextChanged { text ->
+            prefs.edit().putString("serverUrl", text.toString().trimEnd('/')).apply()
+        }
     }
 }

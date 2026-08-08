@@ -60,6 +60,14 @@ class MainActivity : AppCompatActivity()
     private var autoCallRunnable: Runnable? = null
     private var countdownSnackbar: Snackbar? = null
 
+    private val pollHandler = Handler(Looper.getMainLooper())
+    private var pollRunnable: Runnable? = null
+
+    companion object
+    {
+        private const val POLL_INTERVAL_MS = 3000L
+    }
+
     private val filePicker = registerForActivityResult(ActivityResultContracts.OpenDocument())
     { uri ->
         uri?.let()
@@ -567,10 +575,103 @@ class MainActivity : AppCompatActivity()
         }
     }
 
+    override fun onResume()
+    {
+        super.onResume()
+        startPolling()
+    }
+
+    override fun onPause()
+    {
+        super.onPause()
+        stopPolling()
+    }
+
     override fun onDestroy()
     {
         super.onDestroy()
         cancelAutoCall()
+        stopPolling()
+    }
+
+    private fun startPolling()
+    {
+        stopPolling()
+        val serverUrl = prefs.getString("serverUrl", "") ?: ""
+        if (serverUrl.isEmpty()) return
+        pollRunnable = object : Runnable
+        {
+            override fun run()
+            {
+                doPoll()
+                pollHandler.postDelayed(this, POLL_INTERVAL_MS)
+            }
+        }
+        pollHandler.post(pollRunnable!!)
+    }
+
+    private fun stopPolling()
+    {
+        pollRunnable?.let { pollHandler.removeCallbacks(it) }
+        pollRunnable = null
+    }
+
+    private fun doPoll()
+    {
+        val serverUrl = prefs.getString("serverUrl", "")?.trimEnd('/') ?: return
+        if (serverUrl.isEmpty()) return
+        val deviceId = getOrCreateDeviceId()
+        Thread {
+            try
+            {
+                val url = java.net.URL("$serverUrl/api/dial/next?deviceId=$deviceId")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 2000
+                conn.readTimeout    = 2000
+                val body = conn.inputStream.bufferedReader().readText()
+                conn.disconnect()
+
+                val json    = gson.fromJson(body, com.google.gson.JsonObject::class.java)
+                val pending = json.get("pending")
+                if (pending != null && !pending.isJsonNull)
+                {
+                    val obj   = pending.asJsonObject
+                    val phone = obj.get("phone")?.asString ?: return@Thread
+                    val name  = obj.get("name")?.asString  ?: phone
+                    pollHandler.post { handleRemoteDial(phone, name) }
+                }
+            }
+            catch (_: Exception) { }
+        }.start()
+    }
+
+    private fun getOrCreateDeviceId(): String
+    {
+        var id = prefs.getString("deviceId", null)
+        if (id == null)
+        {
+            id = java.util.UUID.randomUUID().toString()
+            prefs.edit().putString("deviceId", id).apply()
+        }
+        return id
+    }
+
+    private fun handleRemoteDial(phone: String, name: String)
+    {
+        val cleanPhone = phone.replace("\\s".toRegex(), "")
+        val idx = contacts.indexOfFirst { it.phone.replace("\\s".toRegex(), "") == cleanPhone }
+        if (idx < 0)
+        {
+            Toast.makeText(this, getString(R.string.toast_remote_not_found, name, phone), Toast.LENGTH_LONG).show()
+            return
+        }
+        currentIndex = idx
+        Toast.makeText(this, getString(R.string.toast_remote_dial, name), Toast.LENGTH_SHORT).show()
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED)
+            callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
+        else
+            dialCurrent()
     }
 
     private fun saveState()

@@ -79,4 +79,12 @@
     <string name="settings_delay_title">Delay before next call</string>
     <string name="settings_delay_description">How long to wait after selecting a call outcome before automatically dialling the next contact.</string>
     <string name="settings_delay_seconds">%1$ds</string>
+    <string name="settings_section_server">BACKOFFICE SERVER</string>
+    <string name="settings_server_url_title">Server URL</string>
+    <string name="settings_server_url_description">Address of the backoffice server on the local network. E.g: http://192.168.1.10:3000</string>
+    <string name="settings_server_url_hint">http://192.168.1.10:3000</string>
+
+    <!-- Remote dial -->
+    <string name="toast_remote_dial">Backoffice: dialling %1$s</string>
+    <string name="toast_remote_not_found">Contact not in local list: %1$s (%2$s)</string>
 </resources>
