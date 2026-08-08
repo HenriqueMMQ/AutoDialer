@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity()
     private var contacts: MutableList<Contact> = mutableListOf()
     private var currentIndex: Int = 0
     private val dncNumbers: MutableSet<String> = mutableSetOf()
+    private var callStartTime: Long = 0L
 
     private val autoCallHandler = Handler(Looper.getMainLooper())
     private var autoCallRunnable: Runnable? = null
@@ -232,6 +233,10 @@ class MainActivity : AppCompatActivity()
             FileOutputStream(templateFile).use { inputStream.copyTo(it) }
             inputStream.close()
 
+            // Seed working.xlsx from the pristine import so backups start immediately
+            rotateBackups()
+            templateFile.copyTo(workingFile(), overwrite = true)
+
             val workbook = WorkbookFactory.create(templateFile)
             val sheet = workbook.getSheetAt(0)
             val newContacts = mutableListOf<Contact>()
@@ -319,6 +324,7 @@ class MainActivity : AppCompatActivity()
         {
             data = Uri.parse("tel:${contact.phone}")
         }
+        callStartTime = System.currentTimeMillis()
         startActivity(intent)
 
         contact.status = "dialed"
@@ -398,6 +404,8 @@ class MainActivity : AppCompatActivity()
                     contact.status = statusKeys[selectedIndex]
                     contact.notes = notesInput.text.toString().trim()
                     contact.calledAt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+                    val elapsedSec = if (callStartTime > 0L) ((System.currentTimeMillis() - callStartTime) / 1000).toInt() else 0
+                    contact.callDuration = if (elapsedSec > 0) formatDuration(elapsedSec) else ""
                     currentIndex++
                     if (dncCheckbox.isChecked) addToDnc(contact.phone)
                     saveState()
@@ -414,12 +422,30 @@ class MainActivity : AppCompatActivity()
             .show()
     }
 
-    private fun resultsFile(): File
+    private fun workingFile(): File = File(getExternalFilesDir(null), "working.xlsx")
+
+    private fun backupFile(n: Int): File = File(getExternalFilesDir(null), "working.bak.$n.xlsx")
+
+    private fun rotateBackups()
     {
-        val originalName = prefs.getString("lastFileName", "contactos") ?: "contactos"
-        val resultsName = originalName.substringBeforeLast(".") + "_resultados.xlsx"
-        return File(getExternalFilesDir(null), resultsName)
+        backupFile(3).delete()
+        if (backupFile(2).exists()) backupFile(2).renameTo(backupFile(3))
+        if (backupFile(1).exists()) backupFile(1).renameTo(backupFile(2))
+        val working = workingFile()
+        if (working.exists()) working.copyTo(backupFile(1), overwrite = true)
     }
+
+    private fun bestReadableWorkingFile(): File?
+    {
+        val candidates = listOf(workingFile(), backupFile(1), backupFile(2), backupFile(3))
+        for (f in candidates)
+        {
+            if (!f.exists()) continue
+            try { WorkbookFactory.create(f).close(); return f } catch (_: Exception) {}
+        }
+        return null
+    }
+
 
     private fun statusLabel(status: String): String = when (status)
     {
@@ -459,6 +485,7 @@ class MainActivity : AppCompatActivity()
                 val statusCol   = col(getString(R.string.col_status))
                 val notesCol    = col(getString(R.string.col_notes))
                 val calledAtCol = col(getString(R.string.col_called_at))
+                val durationCol = col(getString(R.string.col_duration))
 
                 contacts.forEachIndexed()
                 { idx, contact ->
@@ -467,6 +494,7 @@ class MainActivity : AppCompatActivity()
                     row.createCell(statusCol).setCellValue(statusLabel(contact.status))
                     row.createCell(notesCol).setCellValue(contact.notes)
                     row.createCell(calledAtCol).setCellValue(contact.calledAt)
+                    row.createCell(durationCol).setCellValue(contact.callDuration)
                 }
                 wb
             }
@@ -480,7 +508,8 @@ class MainActivity : AppCompatActivity()
                     getString(R.string.col_phone),
                     getString(R.string.col_status),
                     getString(R.string.col_notes),
-                    getString(R.string.col_called_at)
+                    getString(R.string.col_called_at),
+                    getString(R.string.col_duration)
                 ).forEachIndexed { i, title -> headerRow.createCell(i).setCellValue(title) }
                 contacts.filter { it.status != "pending" && it.status != "dialing" }
                     .forEachIndexed()
@@ -491,12 +520,20 @@ class MainActivity : AppCompatActivity()
                         row.createCell(2).setCellValue(statusLabel(contact.status))
                         row.createCell(3).setCellValue(contact.notes)
                         row.createCell(4).setCellValue(contact.calledAt)
+                        row.createCell(5).setCellValue(contact.callDuration)
                     }
                 wb
             }
 
-            FileOutputStream(resultsFile()).use { workbook.write(it) }
+            val tmpFile = File(getExternalFilesDir(null), "working.tmp.xlsx")
+            FileOutputStream(tmpFile).use { workbook.write(it) }
             workbook.close()
+
+            // Validate before replacing
+            WorkbookFactory.create(tmpFile).close()
+
+            rotateBackups()
+            tmpFile.renameTo(workingFile())
         }
         catch (e: Exception)
         {
@@ -513,8 +550,8 @@ class MainActivity : AppCompatActivity()
             return
         }
         exportResultsSilently()
-        val file = resultsFile()
-        if (!file.exists())
+        val file = bestReadableWorkingFile()
+        if (file == null)
         {
             Toast.makeText(this, R.string.toast_results_error, Toast.LENGTH_SHORT).show()
             return
@@ -768,11 +805,12 @@ class MainActivity : AppCompatActivity()
         val serverUrl = prefs.getString("serverUrl", "")?.trimEnd('/') ?: return
         if (serverUrl.isEmpty()) return
         val payload = gson.toJson(mapOf(
-            "contactId" to contact.id,
-            "phone"     to contact.phone,
-            "status"    to contact.status,
-            "notes"     to contact.notes,
-            "calledAt"  to contact.calledAt
+            "contactId"    to contact.id,
+            "phone"        to contact.phone,
+            "status"       to contact.status,
+            "notes"        to contact.notes,
+            "calledAt"     to contact.calledAt,
+            "callDuration" to contact.callDuration
         ))
         Thread {
             try
@@ -1046,12 +1084,19 @@ class MainActivity : AppCompatActivity()
             .apply()
     }
 
+    private fun formatDuration(totalSeconds: Int): String {
+        val m = totalSeconds / 60
+        val s = totalSeconds % 60
+        return if (m > 0) "${m}m ${s}s" else "${s}s"
+    }
+
     // Gson bypasses Kotlin constructors, so fields added after old JSON was saved can be null
     // even though the data class declares them non-null with defaults.
     private fun Contact.sanitize() = this.apply {
-        if (notes    == null) notes    = ""
-        if (calledAt == null) calledAt = ""
-        if (source   == null) source   = ""
+        if (notes        == null) notes        = ""
+        if (calledAt     == null) calledAt     = ""
+        if (source       == null) source       = ""
+        if (callDuration == null) callDuration = ""
     }
 
     private fun MutableList<Contact>.sanitizeAll() = onEach { it.sanitize() }
