@@ -84,6 +84,14 @@
     <string name="settings_server_url_description">Endereço do servidor backoffice na rede local. Ex: http://192.168.1.10:3000</string>
     <string name="settings_server_url_hint">http://192.168.1.10:3000</string>
 
+    <!-- Contact profile dialog -->
+    <string name="profile_title">Contacto #%1$d</string>
+    <string name="source_app_excel">📱 Excel carregado no dispositivo</string>
+    <string name="source_backoffice_excel">🖥️ Excel carregado no backoffice</string>
+    <string name="source_backoffice_manual">✏️ Adicionado manualmente no backoffice</string>
+    <string name="source_remote_dial">📞 Criado por chamada remota</string>
+    <string name="source_unknown">Origem desconhecida</string>
+
     <!-- Remote dial -->
     <string name="toast_remote_dial">Backoffice: a ligar para %1$s</string>
     <string name="toast_remote_not_found">Contacto não encontrado na lista local: %1$s (%2$s)</string>

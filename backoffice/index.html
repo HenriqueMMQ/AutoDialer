@@ -735,7 +735,7 @@ async function pushToDevice()
     const res = await fetch(`${API}/api/device/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contacts: contacts.map(c => ({ id: c.id, name: c.name, phone: c.phone, status: c.status })) })
+      body: JSON.stringify({ contacts: contacts.map(c => ({ id: c.id, name: c.name, phone: c.phone, status: c.status, source: c.source || 'backoffice_manual' })) })
     });
     const data = await res.json();
     toast(`Sent ${data.count} contacts to device — picked up on next poll`);

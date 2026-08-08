@@ -6,5 +6,6 @@ data class Contact(
     val phone: String,
     var status: String = "pending",
     var notes: String = "",
-    var calledAt: String = ""
+    var calledAt: String = "",
+    var source: String = ""
 )

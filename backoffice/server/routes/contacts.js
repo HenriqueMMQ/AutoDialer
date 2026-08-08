@@ -24,7 +24,7 @@ router.post('/upload', upload.single('file'), (req, res) =>
         {
             const name  = row['Name']  || row['Nome']  || '';
             const phone = String(row['Phone'] || row['Telefone'] || row['Number'] || row['Número'] || '').trim();
-            return { id: i + 1, name, phone, status: 'pending', calledAt: '', notes: '' };
+            return { id: i + 1, name, phone, status: 'pending', calledAt: '', notes: '', source: 'backoffice_excel' };
         }).filter(c => c.phone);
 
         // Queue the list so devices pick it up on their next poll
@@ -54,7 +54,8 @@ router.post('/set', (req, res) =>
 
     state.sessionContacts = contacts.map(c => ({
         id: c.id, name: c.name, phone: c.phone,
-        status: c.status || 'pending', calledAt: c.calledAt || '', notes: c.notes || ''
+        status: c.status || 'pending', calledAt: c.calledAt || '', notes: c.notes || '',
+        source: c.source || 'backoffice_manual'
     }));
     res.json({ ok: true, count: state.sessionContacts.length });
 });

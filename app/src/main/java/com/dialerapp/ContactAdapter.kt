@@ -11,7 +11,8 @@ import androidx.recyclerview.widget.RecyclerView
 class ContactAdapter(
     private var contacts: List<Contact>,
     private var currentIndex: Int,
-    private val onItemClick: (Int) -> Unit
+    private val onItemClick: (Int) -> Unit,
+    private val onItemLongClick: (Int) -> Unit = {}
 ) : RecyclerView.Adapter<ContactAdapter.ViewHolder>()
 {
 
@@ -75,6 +76,7 @@ class ContactAdapter(
         })
 
         holder.itemView.setOnClickListener { onItemClick(position) }
+        holder.itemView.setOnLongClickListener { onItemLongClick(position); true }
     }
 
     override fun getItemCount() = contacts.size

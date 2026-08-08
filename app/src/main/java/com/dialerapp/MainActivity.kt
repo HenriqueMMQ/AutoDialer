@@ -259,7 +259,8 @@ class MainActivity : AppCompatActivity()
                     id = newContacts.size + 1,
                     name = contactName,
                     phone = phone,
-                    status = "pending"
+                    status = "pending",
+                    source = "app_excel"
                 ))
             }
             workbook.close()
@@ -696,7 +697,8 @@ class MainActivity : AppCompatActivity()
                 id = contacts.size + 1,
                 name = name,
                 phone = phone,
-                status = "pending"
+                status = "pending",
+                source = "remote_dial"
             )
             contacts.add(temp)
             currentIndex = contacts.size - 1
@@ -767,6 +769,87 @@ class MainActivity : AppCompatActivity()
         }.start()
     }
 
+    private fun showContactProfileDialog(position: Int)
+    {
+        val contact = contacts.getOrNull(position) ?: return
+        val dp = resources.displayMetrics.density
+        val pad = (20 * dp).toInt()
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad * 2, pad, pad * 2, pad)
+        }
+
+        fun labeledField(label: String, value: String, inputType: Int): EditText {
+            container.addView(TextView(this).apply {
+                text = label
+                textSize = 12f
+                setTextColor(0xFF546E7A.toInt())
+                setPadding(0, (8 * dp).toInt(), 0, (2 * dp).toInt())
+            })
+            return EditText(this).apply {
+                setText(value)
+                this.inputType = inputType
+                textSize = 15f
+                container.addView(this)
+            }
+        }
+
+        // Source chip — guard against null for contacts persisted before this field existed
+        val source = contact.source.orEmpty()
+        val sourceLabel = when (source) {
+            "app_excel"         -> getString(R.string.source_app_excel)
+            "backoffice_excel"  -> getString(R.string.source_backoffice_excel)
+            "backoffice_manual" -> getString(R.string.source_backoffice_manual)
+            "remote_dial"       -> getString(R.string.source_remote_dial)
+            else                -> getString(R.string.source_unknown)
+        }
+        container.addView(TextView(this).apply {
+            text = sourceLabel
+            textSize = 11f
+            setTextColor(0xFFFFFFFF.toInt())
+            setBackgroundColor(when (source) {
+                "app_excel"         -> 0xFF1565C0.toInt()
+                "backoffice_excel"  -> 0xFF2E7D32.toInt()
+                "backoffice_manual" -> 0xFF6A1B9A.toInt()
+                "remote_dial"       -> 0xFFE65100.toInt()
+                else                -> 0xFF546E7A.toInt()
+            })
+            setPadding((8 * dp).toInt(), (4 * dp).toInt(), (8 * dp).toInt(), (4 * dp).toInt())
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            val lp = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            lp.bottomMargin = (12 * dp).toInt()
+            layoutParams = lp
+        })
+
+        val nameField  = labeledField(getString(R.string.col_name),  contact.name,  InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS)
+        val phoneField = labeledField(getString(R.string.col_phone), contact.phone, InputType.TYPE_CLASS_PHONE)
+        val notesField = labeledField(getString(R.string.dialog_notes_label), contact.notes,
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
+        notesField.minLines = 2
+        notesField.maxLines = 4
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.profile_title, contact.id))
+            .setView(container)
+            .setPositiveButton(R.string.dialog_save) { _, _ ->
+                val newName  = nameField.text.toString().trim()
+                val newPhone = phoneField.text.toString().trim()
+                val newNotes = notesField.text.toString().trim()
+                if (newName.isNotEmpty() && newPhone.isNotEmpty()) {
+                    contacts[position] = contact.copy(name = newName, phone = newPhone, notes = newNotes)
+                    saveState()
+                    refreshUI()
+                    exportResultsSilently()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun saveState()
     {
         prefs.edit()
@@ -787,11 +870,16 @@ class MainActivity : AppCompatActivity()
             currentIndex = prefs.getInt("currentIndex", 0)
         }
 
-        adapter = ContactAdapter(contacts, currentIndex)
-        { position ->
-            currentIndex = position
-            refreshUI()
-        }
+        adapter = ContactAdapter(
+            contacts, currentIndex,
+            onItemClick = { position ->
+                currentIndex = position
+                refreshUI()
+            },
+            onItemLongClick = { position ->
+                showContactProfileDialog(position)
+            }
+        )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
     }
